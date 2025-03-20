@@ -155,4 +155,5 @@ wandb/
 
 # xyg add
 vq/
-
+datasets_vis/
+logs/

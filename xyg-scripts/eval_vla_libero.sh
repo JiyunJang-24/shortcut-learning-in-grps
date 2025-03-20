@@ -14,7 +14,7 @@ minivla_vq_history="${base_ckpt_path}/models--Stanford-ILIAD--minivla-history2-v
 
 
 export PRISMATIC_DATA_ROOT='/home/xingyouguang/data/projects/robotics/openvla-mini/LIBERO/dataset'
-CUDA_VISIBLE_DEVICES=7 python experiments/robot/libero/run_libero_eval.py \
+CUDA_VISIBLE_DEVICES=0 python experiments/robot/libero/run_libero_eval.py \
   --model_family prismatic \
   --pretrained_checkpoint "${minivla_base}" \
   --task_suite_name libero_90 \

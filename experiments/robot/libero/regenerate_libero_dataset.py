@@ -28,8 +28,10 @@ import json
 import os
 os.environ["PRISMATIC_DATA_ROOT"] = "/mnt/nfs/CMG/xiejunlin/datasets/Robotics/libero"
 
+import cv2
 import h5py
 import numpy as np
+from PIL import Image
 import robosuite.utils.transform_utils as T
 import tqdm
 from libero.libero import benchmark
@@ -104,7 +106,6 @@ def main(args):
         env, task_description = get_libero_env(task, "llava", resolution=IMAGE_RESOLUTION)
 
         # Get dataset for task
-        import ipdb; ipdb.set_trace()
         orig_data_path = os.path.join(args.libero_raw_data_dir, f"{task.name}_demo.hdf5")
         assert os.path.exists(orig_data_path), f"Cannot find raw data file {orig_data_path}."
         orig_data_file = h5py.File(orig_data_path, "r")
@@ -116,7 +117,7 @@ def main(args):
         grp = new_data_file.create_group("data")
 
         # modify every episode in this task
-        for i in range(len(orig_data.keys())):
+        for i in range(len(orig_data.keys())):  # demo_0, demo_1, ..., demo_49, ...
             # Get demo data
             demo_data = orig_data[f"demo_{i}"]
             orig_actions = demo_data["actions"][()]     #  The () is used to indicate that you want to read the entire dataset
@@ -203,6 +204,22 @@ def main(args):
                 ep_data_grp.create_dataset("rewards", data=rewards)
                 ep_data_grp.create_dataset("dones", data=dones)
 
+                if args.show_diff:
+                    cur_agentview_rgb = agentview_images
+                    ori_agentview_rgb = demo_data["obs"]["agentview_rgb"][()]
+                    ori_agentview_rgb = [ori_agentview_rgb[j] for j in range(len(ori_agentview_rgb))]
+                    
+                    # cur_agent_view_rgb 和 ori_agentview_rgb 都是list of numpy.ndarray, shape: (256, 256, 3)
+                    # 将两者竖直方向concat 起来，存为 jpg
+                    # ori_agentview_rgb 图像插值为 (128, 128, 3) -> (256, 256, 3)
+                    import ipdb; ipdb.set_trace()
+                    ori_agentview_rgb = [cv2.resize(ori_agentview_rgb[j], (256, 256)) for j in range(len(ori_agentview_rgb))]
+                    whole_ori_agentview_rgb = np.concatenate(ori_agentview_rgb[::10], axis=1)
+                    whole_cur_agentview_rgb = np.concatenate(cur_agentview_rgb[::10], axis=1)
+                    all_agentview_rgb = np.concatenate((whole_ori_agentview_rgb, whole_cur_agentview_rgb), axis=0)
+                    # 将all_agentview_rgb:(H, W, 3)保存为图片
+                    Image.fromarray(all_agentview_rgb).save(f"{args.libero_task_suite}_{task.name}_demo_{i}.jpg")
+                
                 num_success += 1
 
             num_replays += 1
@@ -262,7 +279,15 @@ if __name__ == "__main__":
         help=("Path to regenerated dataset directory. " "Example: ./LIBERO/libero/datasets/libero_spatial_no_noops"),
         required=True,
     )
+    
+    parser.add_argument(
+        "--show_diff",
+        type=str,
+        help=("difference between the original and the regenerated dataset, e.g. image"),
+        default="False"
+    )
     args = parser.parse_args()
+    args.show_diff = args.show_diff == "True"
 
     # Start data regeneration
     main(args)

@@ -85,9 +85,9 @@ class TrainConfig:
     def __post_init__(self) -> None:
         """Lift optimization parameters from `self.vla` for ease of use =>> validate on `expected_world_size`"""
         # xyg added
-        self.vla.expected_world_size = 8    # expected 8
-        self.vla.global_batch_size = 32      # expected 256 
-        self.vla.per_device_batch_size = 4  # expected 32
+        self.vla.expected_world_size = 2    # expected 8
+        self.vla.global_batch_size = 2      # expected 256 
+        self.vla.per_device_batch_size = 1  # expected 32
         
         self.epochs = self.vla.epochs
         self.max_steps = self.vla.max_steps

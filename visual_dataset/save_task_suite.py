@@ -1,4 +1,6 @@
 import os
+os.environ['PRISMATIC_DATA_ROOT'] = "/mnt/nfs/CMG/xiejunlin/datasets/Robotics/libero"
+
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,7 +13,7 @@ from libero.libero import benchmark
 from PIL import Image
 
 import wandb
-
+import mediapy
 
 sys.path.append("../..")
 from experiments.robot.libero.libero_utils import (
@@ -35,12 +37,13 @@ from experiments.robot.robot_utils import (
 
 @dataclass
 class Config:
-    task_suite_name: str = 'libero_90'
-    num_trials_per_task: int = 1
+    task_suite_name: str = 'libero_spatial'
+    num_trials_per_task: int = 2
+    n_tasks: int = 3
     seed: int = 42
     num_steps_wait: int = 10
     resize_size: int = 224
-
+    save_dir: str = 'datasets_vis/env_init'
 
 @draccus.wrap()
 def main(cfg: Config) -> None:
@@ -49,13 +52,13 @@ def main(cfg: Config) -> None:
     num_trials_per_task = cfg.num_trials_per_task
     num_steps_wait = cfg.num_steps_wait
 
-    base_save_img_dir = f'datasets_vis/{task_suite_name}'
+    base_save_img_dir = f'{cfg.save_dir}/{task_suite_name}'
     os.makedirs(base_save_img_dir, exist_ok=True)
     
     # 先拿task suite
     benchmark_dict = benchmark.get_benchmark_dict()
     task_suite = benchmark_dict[task_suite_name]()
-    num_tasks_in_suite = task_suite.n_tasks
+    num_tasks_in_suite = min(task_suite.n_tasks, cfg.n_tasks)
 
     # 遍历task suite中的每个task
     for task_id in tqdm.tqdm(range(num_tasks_in_suite)):
@@ -75,7 +78,9 @@ def main(cfg: Config) -> None:
             f.write(task_description)
         
         # 每个task还可以遍历它的episode
-        for episode_idx in tqdm.tqdm(range(len(initial_states))):
+        images = []
+        cur_task_trials = min(num_trials_per_task, len(initial_states))
+        for episode_idx in tqdm.tqdm(range(cur_task_trials)):
             print(f"\nTask: {task_description}")
 
             # Reset environment
@@ -88,13 +93,15 @@ def main(cfg: Config) -> None:
             while t < num_steps_wait:
                 obs, reward, done, info = env.step(get_libero_dummy_action(''))
                 t += 1
+                images.append(get_libero_image(obs, resize_size))
                 continue
         
-            img = get_libero_image(obs, resize_size)
-            img_path = f'{save_img_dir}/{episode_idx:03d}.png'
-            Image.fromarray(img).save(img_path)
-            # import ipdb; ipdb.set_trace()
-            # print("this is a test")
+            image = get_libero_image(obs, resize_size)
+            images.append(image)
+        
+            # List[np.array] 通过 mediapy 转化为 video
+            mediapy.write_video(f'{save_img_dir}/video_{episode_idx:02d}.gif', images, fps=10, codec='gif')        
+            
         
         
         

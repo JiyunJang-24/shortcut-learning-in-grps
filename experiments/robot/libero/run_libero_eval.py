@@ -170,6 +170,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
             env.reset()
 
             # Set initial states
+            import ipdb; ipdb.set_trace()
             obs = env.set_init_state(initial_states[episode_idx])
 
             # Setup
