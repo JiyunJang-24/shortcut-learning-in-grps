@@ -20,3 +20,4 @@ libero.egg-info/
 
 # xyg add
 dataset/
+xyg_scripts/image*/

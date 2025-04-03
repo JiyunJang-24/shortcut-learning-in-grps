@@ -18,6 +18,12 @@ Usage:
         python experiments/robot/libero/regenerate_libero_dataset.py \
             --libero_task_suite libero_spatial \
             --libero_dir ./LIBERO/libero/datasets/libero_spatial_no_noops
+            
+        python experiments/robot/libero/visualize_libero_dataset.py \
+            --libero_task_suite libero_spatial \
+            --no_noops True \
+            --libero_dir /mnt/hdd3/xingyouguang/datasets/robotics/libero \
+            --video_save_dir ./tmp_dir3
 
 """
 
@@ -33,6 +39,7 @@ import numpy as np
 import robosuite.utils.transform_utils as T
 import tqdm
 from libero.libero import benchmark
+import matplotlib.pyplot as plt
 
 from experiments.robot.libero.libero_utils import (
     get_libero_dummy_action,
@@ -54,6 +61,7 @@ def main(args):
     num_tasks_in_suite = task_suite.n_tasks
 
     # task loop in task_suite
+    visualize_images = []
     for task_id in tqdm.tqdm(range(num_tasks_in_suite)):
         # Get task in suite
         task = task_suite.get_task(task_id)
@@ -69,11 +77,6 @@ def main(args):
         orig_data_file = h5py.File(orig_data_path, "r")
         orig_data = orig_data_file["data"]
         
-        # Create video save directory, 并将task_description保存为txt文件
-        task_save_dir = os.path.join(args.video_save_dir, f'{args.libero_task_suite}', f'{task.name}')
-        os.makedirs(task_save_dir, exist_ok=True)
-        with open(os.path.join(task_save_dir, 'task_description.txt'), 'w') as f:
-            f.write(task_description)
         
         # loop episodes in task
         for i in range(len(orig_data.keys())):
@@ -91,7 +94,7 @@ def main(args):
             # agentview_rgb: numpy.ndarray, shape: (episode_length, 256, 256, 3)
             # 我们等间隔选取20帧保存为视频
             # fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            video_save_path = os.path.join(args.video_save_dir, f'{args.libero_task_suite}', f'{task.name}', f'demo_{i}.gif')
+            video_save_path = os.path.join(args.video_save_dir, f'{args.libero_task_suite}', f'{task_id}_{task.name}', f'demo_{i}.gif')
             # video_writer = cv2.VideoWriter(video_save_path, fourcc, 5, (agentview_rgb.shape[1], agentview_rgb.shape[2]))
             # for j in range(0, agentview_rgb.shape[0], 20):
             #     # agentview_rgb[j]: numpy.ndarray, shape: (256, 256, 3)
@@ -106,11 +109,23 @@ def main(args):
             # list of numpy.ndarray, shape: (256, 256, 3) -> stack (B, H, W, C). new axis
             agentview_rgb_save_array = np.stack(agentview_rgb_save_list, axis=0)
             agentview_rgb_save_array = agentview_rgb_save_array[:, ::-1, :]  # flip the image(W)
-            media.write_video(video_save_path, agentview_rgb_save_array, fps=5, codec='gif')
+            # media.write_video(video_save_path, agentview_rgb_save_array, fps=5, codec='gif')
             # print(f"Save video to {video_save_path}")
+            visualize_images.append([agentview_rgb_save_list[0], agentview_rgb_save_list[-1]])
+            break
     
-        # import ipdb; ipdb.set_trace()
-        # print('this is the debug point')    
+    import ipdb; ipdb.set_trace()  # len(visualize_images), len(visualize_images[0])
+    print('this is the debug point')
+    # agentview_rgb_save_list 是一个 H x W 个图像的列表
+    # 每个图像的shape是 (256, 256, 3), uint8, 将其 concat 起来保存为 png 文件
+    fig, axes = plt.subplots(nrows=len(visualize_images[0]), ncols=len(visualize_images), figsize=(4*len(visualize_images), 4*len(visualize_images[0])))
+    for i in range(len(visualize_images)):
+        for j in range(len(visualize_images[i])):
+            axes[j, i].imshow(visualize_images[i][j][::-1])
+            axes[j, i].axis('off')
+            axes[j, i].set_title(f'Task {i}, {j}')
+    plt.savefig('libero_spatial_all_tasks.png')
+    
 
 
 if __name__ == "__main__":

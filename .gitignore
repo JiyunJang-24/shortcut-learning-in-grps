@@ -157,3 +157,11 @@ wandb/
 vq/
 datasets_vis/
 logs/
+visualize-v-0.25-0.25-c-0.25-0.25/
+visualize-*-full/
+experiments-island/
+experiments/
+v-0.*_num*/
+data_create_v_back/
+tmp_dir/
+tmp_dir2/

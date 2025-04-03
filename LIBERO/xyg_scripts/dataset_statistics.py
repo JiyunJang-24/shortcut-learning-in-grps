@@ -51,7 +51,7 @@ import libero.libero.envs.bddl_utils as BDDLUtils
 # 定义 BDDL 文件位置
 BASE_PATH = "LIBERO/libero/libero/bddl_files"
 # DATASETS = ["libero_spatial", "libero_object", "libero_goal", "libero_90", "libero_10"]
-DATASETS = ["libero_object"]
+DATASETS = ["libero_spatial"]
 
 
 def parse_bddl_file(file_path):
@@ -118,7 +118,13 @@ def analyze_dataset(dataset_name):
         language_instruction = bddl_file['language_instruction']    # list[str]
         obj_of_interest = bddl_file['obj_of_interest']        # list[str]
     """
+    for data in file_data_list:
+        # print('problem_name: ', data['problem_name'])
+        # print('language_instruction: ', ' '.join(data['language_instruction']))
+        print('goal_state: ', data['goal_state'])
     
+    
+    return
     # 统计数据集中，objects 有哪些, fixtures 有哪些, regions 有哪些
     tmp_objects = []
     for data in file_data_list:

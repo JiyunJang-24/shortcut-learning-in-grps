@@ -78,6 +78,23 @@ def save_rollout_video(rollout_images, idx, success, task_description, log_file=
     return mp4_path
 
 
+def save_rollout_video_dir(rollout_images, idx, success, task_description, log_file=None, 
+                           task_id=None, episode_idx=None, task_suite_name=None, local_log_filepath=None):
+    """Saves an MP4 replay of an episode."""
+    rollout_dir = os.path.join(os.path.dirname(local_log_filepath), os.path.basename(local_log_filepath)[:-4])  # 去除 .txt 后缀
+    os.makedirs(rollout_dir, exist_ok=True)
+    processed_task_description = task_description.lower().replace(" ", "_").replace("\n", "_").replace(".", "_")[:50]
+    mp4_path = f"{rollout_dir}/task_suite={task_suite_name}--task_id={task_id}--episode={episode_idx}--success={success}--task={processed_task_description}.mp4"
+    video_writer = imageio.get_writer(mp4_path, fps=30)
+    for img in rollout_images:
+        video_writer.append_data(img)
+    video_writer.close()
+    print(f"Saved rollout MP4 at path {mp4_path}")
+    if log_file is not None:
+        log_file.write(f"Saved rollout MP4 at path {mp4_path}\n")
+    return mp4_path
+
+
 def quat2axisangle(quat):
     """
     Copied from robosuite: https://github.com/ARISE-Initiative/robosuite/blob/eafb81f54ffc104f905ee48a16bb15f059176ad3/robosuite/utils/transform_utils.py#L490C1-L512C55

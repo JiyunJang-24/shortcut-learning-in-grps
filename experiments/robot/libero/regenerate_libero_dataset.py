@@ -21,6 +21,10 @@ Usage:
             --libero_raw_data_dir ./LIBERO/libero/datasets/libero_spatial \
             --libero_target_dir ./LIBERO/libero/datasets/libero_spatial_no_noops
 
+python experiments/robot/libero/regenerate_libero_dataset.py \
+    --libero_task_suite libero_spatial \
+    --libero_raw_data_dir /mnt/nfs/CMG/xiejunlin/datasets/Robotics/libero-xyg/libero_spatial \
+    --libero_target_dir /mnt/nfs/CMG/xiejunlin/datasets/Robotics/libero-xyg/libero_spatial_no_noops
 """
 
 import argparse
@@ -290,4 +294,13 @@ if __name__ == "__main__":
     args.show_diff = args.show_diff == "True"
 
     # Start data regeneration
+    import time
+    start_time = time.time()
     main(args)
+    end_time = time.time()
+    # hours: minutes: seconds
+    elapsed_time = end_time - start_time
+    hours = int(elapsed_time // 3600)
+    minutes = int((elapsed_time % 3600) // 60)
+    seconds = int(elapsed_time % 60)
+    print(f"Time taken: {hours}:{minutes}:{seconds}")
