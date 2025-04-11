@@ -161,7 +161,9 @@ visualize-v-0.25-0.25-c-0.25-0.25/
 visualize-*-full/
 experiments-island/
 experiments/
+experiments-cd/
 v-0.*_num*/
 data_create_v_back/
+data_create_v_back2/
 tmp_dir/
 tmp_dir2/

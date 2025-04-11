@@ -85,9 +85,9 @@ class TrainConfig:
     def __post_init__(self) -> None:
         """Lift optimization parameters from `self.vla` for ease of use =>> validate on `expected_world_size`"""
         # xyg added
-        self.vla.expected_world_size = 2    # expected 8
-        self.vla.global_batch_size = 2      # expected 256 
-        self.vla.per_device_batch_size = 1  # expected 32
+        # self.vla.expected_world_size = 1    # expected 8
+        # self.vla.global_batch_size = 1      # expected 256 
+        # self.vla.per_device_batch_size = 1  # expected 32
         
         self.epochs = self.vla.epochs
         self.max_steps = self.vla.max_steps
@@ -138,6 +138,7 @@ def train(cfg: TrainConfig) -> None:
 
     # Start =>> Build Directories and Set Randomness
     overwatch.info('"Do or do not; there is no try."', ctx_level=1)
+    import ipdb; ipdb.set_trace()
     hf_token = cfg.hf_token.read_text().strip() if isinstance(cfg.hf_token, Path) else os.environ[cfg.hf_token]
     worker_init_fn = set_global_seed(cfg.seed, get_worker_init_fn=True)
     os.makedirs(run_dir := (cfg.run_root_dir / cfg.run_id), exist_ok=True)
@@ -153,6 +154,7 @@ def train(cfg: TrainConfig) -> None:
     # Load VLA checkpoint (if resuming from training) or Base VLM otherwise (from `cfg.vla.base_vlm` ID or Path)
     #   =>> Note :: Verifies that all parameters are loaded in FP32 on load!
     overwatch.info(f"Loading Base VLM `{cfg.vla.base_vlm}` from ID/Path")
+    import ipdb; ipdb.set_trace()
     if cfg.pretrained_checkpoint is not None:
         # [Validate] Pretrained Checkpoint `step` and `epoch` should match `resume_step` and `resume_epoch`
         #   =>> Note :: We make developers pass in `resume_*` arguments as an extra sanity check!
