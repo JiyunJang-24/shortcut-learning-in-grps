@@ -160,7 +160,7 @@ logs/
 visualize-v-0.25-0.25-c-0.25-0.25/
 visualize-*-full/
 experiments-island/
-experiments/
+experiments/logs*/
 experiments-cd/
 v-0.*_num*/
 data_create_v_back/
