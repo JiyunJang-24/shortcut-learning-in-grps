@@ -28,7 +28,26 @@ def make_oxe_dataset_kwargs(
     action_proprio_normalization_type: NormalizationType = NormalizationType.NORMAL,
 ) -> Dict[str, Any]:
     """Generates config (kwargs) for given dataset from Open-X Embodiment."""
-    dataset_kwargs = deepcopy(OXE_DATASET_CONFIGS[dataset_name])
+    if dataset_name in OXE_DATASET_CONFIGS:
+        dataset_kwargs = deepcopy(OXE_DATASET_CONFIGS[dataset_name])
+    elif "libero" in dataset_name:
+        if "libero_spatial" in dataset_name:
+            use_dataset_name = "libero_spatial_no_noops"
+        elif "libero_object" in dataset_name:
+            use_dataset_name = "libero_object_no_noops"
+        elif "libero_goal" in dataset_name:
+            use_dataset_name = "libero_goal_no_noops"
+        elif "libero_10" in dataset_name:
+            use_dataset_name = "libero_10_no_noops"
+        elif "libero_90" in dataset_name:
+            use_dataset_name = "libero_90"
+        else:
+            raise ValueError(f"Cannot load `{dataset_name}`; dataset not found!")
+            
+        dataset_kwargs = deepcopy(OXE_DATASET_CONFIGS[use_dataset_name])
+    else:
+        raise ValueError(f"Cannot load `{dataset_name}`; dataset not found!")
+
     if dataset_kwargs["action_encoding"] not in [ActionEncoding.EEF_POS, ActionEncoding.EEF_R6]:
         raise ValueError(f"Cannot load `{dataset_name}`; only EEF_POS & EEF_R6 actions supported!")
 
@@ -67,7 +86,25 @@ def make_oxe_dataset_kwargs(
         dataset_kwargs["language_key"] = "language_instruction"
 
     # Specify Standardization Transform
-    dataset_kwargs["standardize_fn"] = OXE_STANDARDIZATION_TRANSFORMS[dataset_name]
+    if dataset_name in OXE_STANDARDIZATION_TRANSFORMS:
+        dataset_kwargs["standardize_fn"] = OXE_STANDARDIZATION_TRANSFORMS[dataset_name]
+    elif "libero" in dataset_name:
+        if "libero_spatial" in dataset_name:
+            use_dataset_name = "libero_spatial_no_noops"
+        elif "libero_object" in dataset_name:
+            use_dataset_name = "libero_object_no_noops"
+        elif "libero_goal" in dataset_name:
+            use_dataset_name = "libero_goal_no_noops"
+        elif "libero_10" in dataset_name:
+            use_dataset_name = "libero_10_no_noops"
+        elif "libero_90" in dataset_name:
+            use_dataset_name = "libero_90"
+        else:
+            raise ValueError(f"Cannot load `{dataset_name}`; dataset not found!")
+            
+        dataset_kwargs["standardize_fn"] = OXE_STANDARDIZATION_TRANSFORMS[use_dataset_name]
+    else:
+        raise ValueError(f"Cannot load `{dataset_name}`; standardization transform not found!")
 
     # Add any aux arguments
     if "aux_kwargs" in dataset_kwargs:

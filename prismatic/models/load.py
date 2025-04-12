@@ -25,7 +25,7 @@ overwatch = initialize_overwatch(__name__)
 
 
 # === HF Hub Repository ===
-HF_HUB_REPO = "TRI-ML/prismatic-vlms"
+HF_HUB_REPO = "Stanford-ILIAD"
 VLA_HF_HUB_REPO = "openvla/openvla-dev"
 
 
@@ -61,19 +61,19 @@ def load(
         overwatch.info(f"Loading from local path `{(run_dir := Path(model_id_or_path))}`")
 
         # Get paths for `config.json` and pretrained checkpoint
-        config_json, checkpoint_pt = run_dir / "config.json", run_dir / "checkpoints" / "latest-checkpoint.pt"
+        config_json, checkpoint_pt = run_dir / "config.json", run_dir / "checkpoints" / "step-020792-epoch-01-loss=0.5268.pt"
         assert config_json.exists(), f"Missing `config.json` for `{run_dir = }`"
         assert checkpoint_pt.exists(), f"Missing checkpoint for `{run_dir = }`"
     else:
         if model_id_or_path not in GLOBAL_REGISTRY:
             import ipdb; ipdb.set_trace()
             raise ValueError(f"Couldn't find `{model_id_or_path = }; check `prismatic.available_model_names()`")
-
         overwatch.info(f"Downloading `{(model_id := GLOBAL_REGISTRY[model_id_or_path]['model_id'])} from HF Hub")
         with overwatch.local_zero_first():
             config_json = hf_hub_download(repo_id=HF_HUB_REPO, filename=f"{model_id}/config.json", cache_dir=cache_dir)
             checkpoint_pt = hf_hub_download(
-                repo_id=HF_HUB_REPO, filename=f"{model_id}/checkpoints/latest-checkpoint.pt", cache_dir=cache_dir
+                # repo_id=HF_HUB_REPO, filename=f"{model_id}/checkpoints/latest-checkpoint.pt", cache_dir=cache_dir
+                repo_id=HF_HUB_REPO, filename=f"{model_id}/checkpoints/step-020792-epoch-01-loss=0.5268.pt", cache_dir=cache_dir
             )
 
     # Load Model Config from `config.json`

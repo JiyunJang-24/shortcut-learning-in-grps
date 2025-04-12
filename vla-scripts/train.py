@@ -135,10 +135,15 @@ def train(cfg: TrainConfig) -> None:
         cfg.run_id += f"--{cfg.run_id_note}"
     if cfg.image_aug:
         cfg.run_id += "--image_aug"
-
+    # 加入时间 年 - 月 - 日 - 时 - 分 - 秒
+    from datetime import datetime
+    current_time = datetime.now()
+    cfg.run_root_dir = os.path.join(
+        "./logs", f"{current_time.year}-{current_time.month}-{current_time.day}", 
+        f"{current_time.hour}-{current_time.minute}-{current_time.second}_{cfg.run_root_dir}"
+    )
     # Start =>> Build Directories and Set Randomness
     overwatch.info('"Do or do not; there is no try."', ctx_level=1)
-    import ipdb; ipdb.set_trace()
     hf_token = cfg.hf_token.read_text().strip() if isinstance(cfg.hf_token, Path) else os.environ[cfg.hf_token]
     worker_init_fn = set_global_seed(cfg.seed, get_worker_init_fn=True)
     os.makedirs(run_dir := (cfg.run_root_dir / cfg.run_id), exist_ok=True)
@@ -154,7 +159,6 @@ def train(cfg: TrainConfig) -> None:
     # Load VLA checkpoint (if resuming from training) or Base VLM otherwise (from `cfg.vla.base_vlm` ID or Path)
     #   =>> Note :: Verifies that all parameters are loaded in FP32 on load!
     overwatch.info(f"Loading Base VLM `{cfg.vla.base_vlm}` from ID/Path")
-    import ipdb; ipdb.set_trace()
     if cfg.pretrained_checkpoint is not None:
         # [Validate] Pretrained Checkpoint `step` and `epoch` should match `resume_step` and `resume_epoch`
         #   =>> Note :: We make developers pass in `resume_*` arguments as an extra sanity check!
@@ -224,7 +228,6 @@ def train(cfg: TrainConfig) -> None:
         image_window_size=cfg.image_sequence_len // 2 if cfg.use_wrist_image else cfg.image_sequence_len,
         use_wrist_image=cfg.use_wrist_image,  # will double the sequence length
     )
-
     # Save dataset statistics for de-normalization at inference time
     if overwatch.is_rank_zero():
         save_dataset_statistics(vla_dataset.dataset_statistics, run_dir)

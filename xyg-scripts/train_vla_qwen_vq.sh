@@ -1,0 +1,44 @@
+#!/bin/bash
+CONDA_BASE=$(conda info --base)
+source "$CONDA_BASE/etc/profile.d/conda.sh"
+export HF_ENDPOINT=https://hf-mirror.com
+export CUDA_DEVICE_ORDER="PCI_BUS_ID"
+export PRISMATIC_DATA_ROOT="${LIBERO_DATA_ROOT}"
+export MASTER_ADDR='127.0.0.1'
+export MASTER_PORT='29500'
+conda activate openvla-mini
+
+
+# Next we train MiniVLA based on this Prism base VLM on LIBERO-90.
+# Run from the root of the repository
+# LIBERO_DATA_ROOT=/mnt/nfs/CMG/xiejunlin/datasets/Robotics/libero
+LIBERO_DATA_ROOT=/mnt/hdd3/xingyouguang/datasets/robotics/libero/libero_spatial_no_noops_rlds
+LOG_ROOT=libero_qwen_pretrain_test
+WANDB_PROJECT="libero_qwen1"
+WANDB_ENTITY="1207481522" # should be you user name or team name in w&b account
+
+WORLD_SIZE=6
+BATCH_SIZE=8
+CUDA_VISIBLE_DEVICES_LIST="0"
+for ((i=1; i<WORLD_SIZE; i++)); do
+    CUDA_VISIBLE_DEVICES_LIST="${CUDA_VISIBLE_DEVICES_LIST},${i}"
+done
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_LIST}"
+
+
+DATA_MIX="libero_spatial"
+
+CKPT_PATH='/home/xingyouguang/.cache/huggingface/hub/models--Stanford-ILIAD--prism-qwen25-extra-dinosiglip-224px-0_5b/snapshots/5cfd2cc6da00c06e0be7abf35d43ec792d8e9498'
+torchrun --standalone --nnodes 1 --nproc-per-node "${WORLD_SIZE}" --master-addr=${MASTER_ADDR} --master-port=${MASTER_PORT} vla-scripts/train.py \
+  --vla.type "prism-qwen25-dinosiglip-224px+0_5b+mx-libero-90" \
+  --vla.data_mix "${DATA_MIX}" \
+  --vla.base_vlm "${CKPT_PATH}" \
+  --vla.action_tokenizer libero_vq_extra_action_tokenizer \
+  --vla.expected_world_size "${WORLD_SIZE}" \
+  --vla.global_batch_size "$((${BATCH_SIZE} * ${WORLD_SIZE}))" \
+  --vla.per_device_batch_size "${BATCH_SIZE}" \
+  --data_root_dir "${LIBERO_DATA_ROOT}" \
+  --run_root_dir "${LOG_ROOT}" \
+  --wandb_project "${WANDB_PROJECT}" \
+  --wandb_entity "${WANDB_ENTITY}" \
+  --is_resume False
