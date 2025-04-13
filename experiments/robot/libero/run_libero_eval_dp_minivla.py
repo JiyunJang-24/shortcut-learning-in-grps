@@ -1,5 +1,5 @@
 """
-run_libero_eval_dp.py for diffusion policy
+run_libero_eval_dp_minivla.py for diffusion policy and minivla model
 
 Runs a model in a LIBERO simulation environment.
 
@@ -228,7 +228,22 @@ def eval_libero(cfg: GenerateConfig) -> None:
         policy = DiffusionPolicy.from_pretrained(pretrained_policy_path)
     else:
         policy = get_model(cfg)
+        model = policy
+    
+    # [OpenVLA] Check that the model contains the action un-normalization key
+    if cfg.model_family in ["openvla", "prismatic"]:
+        # In some cases, the key must be manually modified (e.g. after training on a modified version of the dataset
+        # with the suffix "_no_noops" in the dataset name)
+        if cfg.unnorm_key not in model.norm_stats and f"{cfg.unnorm_key}_no_noops" in model.norm_stats:
+            cfg.unnorm_key = f"{cfg.unnorm_key}_no_noops"
+        assert cfg.unnorm_key in model.norm_stats, f"Action un-norm key {cfg.unnorm_key} not found in VLA `norm_stats`!"
+
+    # [OpenVLA] Get Hugging Face processor
+    processor = None
+    if cfg.model_family == "openvla":
+        processor = get_processor(cfg)
         
+    
     log_file = open(local_log_filepath, "w")
     print(f"Logging to local log file: {local_log_filepath}")
     
@@ -272,8 +287,6 @@ def eval_libero(cfg: GenerateConfig) -> None:
     change_light = cfg.change_light
     base_num = cfg.base_num
     
-    
-    
     viewpoint_rotate_min = interpolate_number(viewpoint_rotate_lower_bound, viewpoint_rotate_upper_bound, viewpoint_rotate_min_interpolate_weight)
     viewpoint_rotate_max = interpolate_number(viewpoint_rotate_lower_bound, viewpoint_rotate_upper_bound, viewpoint_rotate_max_interpolate_weight)
     color_scale_min = interpolate_number(color_scale_lower_bound, color_scale_upper_bound, color_scale_min_interpolate_weight)
@@ -289,7 +302,10 @@ def eval_libero(cfg: GenerateConfig) -> None:
     log_file.write(f"Task suite: {cfg.task_suite_name}\n")
 
     # Get expected image dimensions
-    resize_size = get_image_resize_size(cfg) if IMAGE_RESOLUTION is None else IMAGE_RESOLUTION
+    if cfg.model_family == "diffusion":
+        resize_size = get_image_resize_size(cfg) if IMAGE_RESOLUTION is None else IMAGE_RESOLUTION
+    else:
+        resize_size = get_image_resize_size(cfg)
 
     # Start evaluation
     start_time = time.time()
@@ -365,36 +381,95 @@ def eval_libero(cfg: GenerateConfig) -> None:
                         obs, reward, done, info = env.step(get_libero_dummy_action(cfg.model_family))
                         t += 1
                         continue
+                    
+                    if cfg.model_family == "diffusion":
+                        # Get preprocessed image, 这里image已经是flip了，他和咱们训练的 xyg/v-0.xx-0.xx-0.xx-0.xx-flip 一致
+                        replay_images.append(np.flipud(obs["agentview_image"]).copy())
+                        image = torch.from_numpy(np.flipud(obs["agentview_image"]).copy())
+                        state = torch.from_numpy(np.concatenate([obs["robot0_gripper_qpos"], obs["robot0_eef_pos"], obs["robot0_eef_quat"]]))
+                        state = state.to(torch.float32)
+                        image = image.to(torch.float32) / 255
+                        image = image.permute(2, 0, 1)  # H, W, C -> C, H, W
+                        # Send data tensors from CPU to GPU
+                        state = state.to('cuda', non_blocking=True)
+                        image = image.to('cuda', non_blocking=True)
 
-                    # Get preprocessed image, 这里image已经是flip了，他和咱们训练的 xyg/v-0.xx-0.xx-0.xx-0.xx-flip 一致
-                    replay_images.append(np.flipud(obs["agentview_image"]).copy())
-                    image = torch.from_numpy(np.flipud(obs["agentview_image"]).copy())
-                    state = torch.from_numpy(np.concatenate([obs["robot0_gripper_qpos"], obs["robot0_eef_pos"], obs["robot0_eef_quat"]]))
-                    state = state.to(torch.float32)
-                    image = image.to(torch.float32) / 255
-                    image = image.permute(2, 0, 1)  # H, W, C -> C, H, W
-                    # Send data tensors from CPU to GPU
-                    state = state.to('cuda', non_blocking=True)
-                    image = image.to('cuda', non_blocking=True)
+                        # Add extra (empty) batch dimension, required to forward the policy
+                        state = state.unsqueeze(0)
+                        image = image.unsqueeze(0)
 
-                    # Add extra (empty) batch dimension, required to forward the policy
-                    state = state.unsqueeze(0)
-                    image = image.unsqueeze(0)
+                        # Create the policy input dictionary
+                        observation = {
+                            "observation.state": state,
+                            "observation.image": image,
+                        }
 
-                    # Create the policy input dictionary
-                    observation = {
-                        "observation.state": state,
-                        "observation.image": image,
-                    }
+                        with torch.inference_mode():
+                            action = policy.select_action(observation)
 
-                    with torch.inference_mode():
-                        action = policy.select_action(observation)
+                        # Prepare the action for the environment
+                        numpy_action = action.squeeze(0).to("cpu").numpy()
 
-                    # Prepare the action for the environment
-                    numpy_action = action.squeeze(0).to("cpu").numpy()
+                        # Execute action in environment
+                        obs, reward, done, info = env.step(numpy_action)
+                    elif cfg.model_family == "openvla":
+                        # Get preprocessed image
+                        img = get_libero_image(obs, resize_size)
 
-                    # Execute action in environment
-                    obs, reward, done, info = env.step(numpy_action)
+                        # Save preprocessed image for replay video
+                        replay_images.append(img)
+
+                        # use_wrist_image
+                        if cfg.use_wrist_image:
+                            wrist_img = get_libero_image(obs, resize_size, key="robot0_eye_in_hand_image")
+                            replay_wrist_images.append(wrist_img)
+
+                        # buffering #obs_history images, optionally
+                        image_history = replay_images[-cfg.obs_history :]
+                        if len(image_history) < cfg.obs_history:
+                            image_history.extend([replay_images[-1]] * (cfg.obs_history - len(image_history)))
+
+                        # same but for optional wrist images
+                        if cfg.use_wrist_image:
+                            wrist_image_history = replay_wrist_images[-cfg.obs_history :]
+                            if len(wrist_image_history) < cfg.obs_history:
+                                wrist_image_history.extend(
+                                    [replay_wrist_images[-1]] * (cfg.obs_history - len(wrist_image_history))
+                                )
+                            # interleaved images [... image_t, wrist_t ...]
+                            image_history = [val for tup in zip(image_history, wrist_image_history) for val in tup]
+
+                        # Prepare observations dict
+                        # Note: OpenVLA does not take proprio state as input
+                        observation = {
+                            "full_image": image_history,
+                            "state": np.concatenate(
+                                (obs["robot0_eef_pos"], quat2axisangle(obs["robot0_eef_quat"]), obs["robot0_gripper_qpos"])
+                            ),
+                        }
+
+                        # Query model to get action
+                        action = get_action(
+                            cfg,
+                            model,
+                            observation,
+                            task_description,
+                            processor=processor,
+                        )
+
+                        # Normalize gripper action [0,1] -> [-1,+1] because the environment expects the latter
+                        action = normalize_gripper_action(action, binarize=True)
+
+                        # [OpenVLA] The dataloader flips the sign of the gripper action to align with other datasets
+                        # (0 = close, 1 = open), so flip it back (-1 = open, +1 = close) before executing the action
+                        if cfg.model_family in ["openvla", "prismatic"]:
+                            action = invert_gripper_action(action)
+
+                        # Execute action in environment
+                        obs, reward, done, info = env.step(action.tolist())
+                    else:
+                        raise ValueError("123, 123")
+                    
                     if done:
                         task_successes += 1
                         total_successes += 1
