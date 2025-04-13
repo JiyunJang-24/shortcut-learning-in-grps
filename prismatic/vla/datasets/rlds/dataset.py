@@ -12,6 +12,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import dlimp as dl
 import numpy as np
+import os
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
@@ -199,7 +200,13 @@ def make_dataset_from_rlds(
 
         return traj
 
-    builder = tfds.builder(name, data_dir=data_dir)
+    if '/' in name:
+        split_name = str(name)
+        assert len(split_name.split('/')) == 2, "xyg shortcut dataset: e.g. v-0.400-0.400_num1/libero_spatial"
+        dataset_name_x, dataset_name_y = split_name.split('/')
+        builder = tfds.builder(dataset_name_y, data_dir=os.path.join(data_dir, dataset_name_x))
+    else:
+        builder = tfds.builder(name, data_dir=data_dir)
 
     # load or compute dataset statistics
     if isinstance(dataset_statistics, str):

@@ -18,14 +18,14 @@ mid_number1="$(echo "scale=3; ($min_weight1 + $max_weight2) / 2" | bc)"
 mid_number2="${mid_number1}"
 sleep_time=30
 
-local_log_dir="./experiments-cd/logs-${min_weight1}-${max_weight1}-${task1_id}-${min_weight2}-${max_weight2}-${task2_id}"
+local_log_dir="./experiments-test/logs-${min_weight1}-${max_weight1}-${task1_id}-${min_weight2}-${max_weight2}-${task2_id}"
 num_trials_per_task=25
 num_tasks_in_suite=1
 
 delta_shift=0.01
 
-viewpoint_rotate_upper_bound=15.0
-viewpoint_rotate_lower_bound=65.0
+viewpoint_rotate_lower_bound=15.0
+viewpoint_rotate_upper_bound=65.0
 
 need_inner_interpolate=True
 need_outer_extension=False
@@ -125,15 +125,15 @@ for sub_dir in "${ckpt_paths[@]}"; do
         continue
     fi
 
-    # if sub_dir != 010000, continue
-    # if [ "${sub_dir}" != "040000" ]; then
-    #     continue
-    # fi
+    # if sub_dir != 015000, continue
+    if [ "${sub_dir}" != "015000" ]; then
+        continue
+    fi
 
     ckpt_path="${base_ckpt_dir}/${sub_dir}/pretrained_model"
 
     # AA
-    python experiments/robot/libero/run_libero_eval_dp.py \
+    python experiments/robot/libero/run_libero_eval_dp_minivla.py \
         --model_family diffusion \
         --pretrained_checkpoint "${ckpt_path}" \
         --task_suite_name=libero_spatial \
@@ -153,7 +153,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
     sleep "${sleep_time}"
 
     # BB
-    python experiments/robot/libero/run_libero_eval_dp.py \
+    python experiments/robot/libero/run_libero_eval_dp_minivla.py \
         --model_family diffusion \
         --pretrained_checkpoint "${ckpt_path}" \
         --task_suite_name=libero_spatial \
@@ -178,7 +178,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
             for task in A; do
                 echo "################# viewpoint: ${viewpoint}, task: ${task} #################"
                 read cur_viewpoint_weight_min cur_viewpoint_weight_max cur_task_id <<< "$(get_cur_weight_and_task_id ${viewpoint} ${task})"
-                python experiments/robot/libero/run_libero_eval_dp.py \
+                python experiments/robot/libero/run_libero_eval_dp_minivla.py \
                     --model_family diffusion \
                     --pretrained_checkpoint "${ckpt_path}" \
                     --task_suite_name=libero_spatial \
@@ -204,7 +204,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
             for task in B; do
                 echo "################# viewpoint: ${viewpoint}, task: ${task} #################"
                 read cur_viewpoint_weight_min cur_viewpoint_weight_max cur_task_id <<< "$(get_cur_weight_and_task_id ${viewpoint} ${task})"
-                python experiments/robot/libero/run_libero_eval_dp.py \
+                python experiments/robot/libero/run_libero_eval_dp_minivla.py \
                     --model_family diffusion \
                     --pretrained_checkpoint "${ckpt_path}" \
                     --task_suite_name=libero_spatial \
@@ -232,7 +232,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
         viewpoint="AL"
         task="B"
         read cur_viewpoint_weight_min cur_viewpoint_weight_max cur_task_id <<< "$(get_cur_weight_and_task_id ${viewpoint} ${task})"
-        python experiments/robot/libero/run_libero_eval_dp.py \
+        python experiments/robot/libero/run_libero_eval_dp_minivla.py \
             --model_family diffusion \
             --pretrained_checkpoint "${ckpt_path}" \
             --task_suite_name=libero_spatial \
@@ -254,7 +254,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
         viewpoint="BR"
         task="A"
         read cur_viewpoint_weight_min cur_viewpoint_weight_max cur_task_id <<< "$(get_cur_weight_and_task_id ${viewpoint} ${task})"
-        python experiments/robot/libero/run_libero_eval_dp.py \
+        python experiments/robot/libero/run_libero_eval_dp_minivla.py \
             --model_family diffusion \
             --pretrained_checkpoint "${ckpt_path}" \
             --task_suite_name=libero_spatial \
@@ -272,7 +272,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
             --seed 7 &
 
     fi
-    # wait
+    wait
 
 done
 

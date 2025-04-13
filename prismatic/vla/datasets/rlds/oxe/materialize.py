@@ -30,16 +30,16 @@ def make_oxe_dataset_kwargs(
     """Generates config (kwargs) for given dataset from Open-X Embodiment."""
     if dataset_name in OXE_DATASET_CONFIGS:
         dataset_kwargs = deepcopy(OXE_DATASET_CONFIGS[dataset_name])
-    elif "libero" in dataset_name:
-        if "libero_spatial" in dataset_name:
+    elif "libero" in dataset_name or "libero" in str(data_root_dir):
+        if "libero_spatial" in dataset_name or "libero_spatial" in str(data_root_dir):
             use_dataset_name = "libero_spatial_no_noops"
-        elif "libero_object" in dataset_name:
+        elif "libero_object" in dataset_name or "libero_object" in str(data_root_dir):
             use_dataset_name = "libero_object_no_noops"
-        elif "libero_goal" in dataset_name:
+        elif "libero_goal" in dataset_name or "libero_goal" in str(data_root_dir):
             use_dataset_name = "libero_goal_no_noops"
-        elif "libero_10" in dataset_name:
+        elif "libero_10" in dataset_name or "libero_10" in str(data_root_dir):
             use_dataset_name = "libero_10_no_noops"
-        elif "libero_90" in dataset_name:
+        elif "libero_90" in dataset_name or "libero_90" in str(data_root_dir):
             use_dataset_name = "libero_90"
         else:
             raise ValueError(f"Cannot load `{dataset_name}`; dataset not found!")
@@ -88,16 +88,16 @@ def make_oxe_dataset_kwargs(
     # Specify Standardization Transform
     if dataset_name in OXE_STANDARDIZATION_TRANSFORMS:
         dataset_kwargs["standardize_fn"] = OXE_STANDARDIZATION_TRANSFORMS[dataset_name]
-    elif "libero" in dataset_name:
-        if "libero_spatial" in dataset_name:
+    elif "libero" in dataset_name or "libero" in str(data_root_dir):
+        if "libero_spatial" in dataset_name or "libero_spatial" in str(data_root_dir):
             use_dataset_name = "libero_spatial_no_noops"
-        elif "libero_object" in dataset_name:
+        elif "libero_object" in dataset_name or "libero_object" in str(data_root_dir):
             use_dataset_name = "libero_object_no_noops"
-        elif "libero_goal" in dataset_name:
+        elif "libero_goal" in dataset_name or "libero_goal" in str(data_root_dir):
             use_dataset_name = "libero_goal_no_noops"
-        elif "libero_10" in dataset_name:
+        elif "libero_10" in dataset_name or "libero_10" in str(data_root_dir):
             use_dataset_name = "libero_10_no_noops"
-        elif "libero_90" in dataset_name:
+        elif "libero_90" in dataset_name or "libero_90" in str(data_root_dir):
             use_dataset_name = "libero_90"
         else:
             raise ValueError(f"Cannot load `{dataset_name}`; dataset not found!")

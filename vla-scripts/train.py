@@ -142,6 +142,7 @@ def train(cfg: TrainConfig) -> None:
         "./logs", f"{current_time.year}-{current_time.month}-{current_time.day}", 
         f"{current_time.hour}-{current_time.minute}-{current_time.second}_{cfg.run_root_dir}"
     )
+    cfg.run_root_dir = Path(cfg.run_root_dir)
     # Start =>> Build Directories and Set Randomness
     overwatch.info('"Do or do not; there is no try."', ctx_level=1)
     hf_token = cfg.hf_token.read_text().strip() if isinstance(cfg.hf_token, Path) else os.environ[cfg.hf_token]

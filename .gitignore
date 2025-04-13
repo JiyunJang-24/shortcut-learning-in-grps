@@ -162,6 +162,8 @@ visualize-*-full/
 experiments-island/
 experiments/logs*/
 experiments-cd/
+experiments-test/
+experiments-mini/
 v-0.*_num*/
 data_create_v_back/
 data_create_v_back2/

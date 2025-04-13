@@ -13,13 +13,13 @@ libero_base_save_dir="${libero_raw_data_dir}_no_noops_island"
 viewpoint_rotate_lower_bound=15.0
 viewpoint_rotate_upper_bound=65.0
 vmin=0.400
-vmax=0.550
+vmax=0.400
 num_tasks_in_suite=1
 specify_task_id=0
 number_demo_per_task=20
 demo_repeat_times=10
 
-if [ 1 -eq 1 ]; then
+if [ 1 -eq 2 ]; then
     python experiments/robot/libero/regenerate_libero_hdf5_lerobot_dataset_repeat.py \
         --libero_task_suite $libero_task_suite \
         --libero_raw_data_dir $libero_raw_data_dir \

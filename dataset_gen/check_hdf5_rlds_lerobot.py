@@ -13,7 +13,7 @@ from lerobot.common.datasets.lerobot_dataset import (
 )
 
 def main():
-    step_num=20
+    step_num=80
     
     repo_name = "xyg_15.0_65.0_test/v-0.250-0.450_num1"
     # hdf5    
