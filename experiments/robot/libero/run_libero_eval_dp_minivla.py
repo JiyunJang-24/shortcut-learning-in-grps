@@ -234,17 +234,19 @@ def eval_libero(cfg: GenerateConfig) -> None:
     if cfg.model_family in ["openvla", "prismatic"]:
         # In some cases, the key must be manually modified (e.g. after training on a modified version of the dataset
         # with the suffix "_no_noops" in the dataset name)
-        if cfg.unnorm_key not in model.norm_stats and f"{cfg.unnorm_key}_no_noops" in model.norm_stats:
-            cfg.unnorm_key = f"{cfg.unnorm_key}_no_noops"
-        assert cfg.unnorm_key in model.norm_stats, f"Action un-norm key {cfg.unnorm_key} not found in VLA `norm_stats`!"
-
+        if len(model.norm_stats) == 2 and "libero_spatial" in list(model.norm_stats.keys())[0] and "libero_spatial" in list(model.norm_stats.keys())[1]:
+            cfg.unnorm_key = sorted(list(model.norm_stats.keys()))[0]
+        else:
+            if cfg.unnorm_key not in model.norm_stats and f"{cfg.unnorm_key}_no_noops" in model.norm_stats:
+                cfg.unnorm_key = f"{cfg.unnorm_key}_no_noops"
+            assert cfg.unnorm_key in model.norm_stats, f"Action un-norm key {cfg.unnorm_key} not found in VLA `norm_stats`!"
+        
     # [OpenVLA] Get Hugging Face processor
     processor = None
     if cfg.model_family == "openvla":
         processor = get_processor(cfg)
         
-    
-    log_file = open(local_log_filepath, "w")
+    log_file = open(local_log_filepath, "w", buffering=1)  # Enable line buffering
     print(f"Logging to local log file: {local_log_filepath}")
     
     # 将 cfg 中的参数写入 log_file, 包括 cfg 的每个属性
@@ -412,7 +414,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
 
                         # Execute action in environment
                         obs, reward, done, info = env.step(numpy_action)
-                    elif cfg.model_family == "openvla":
+                    elif cfg.model_family in ["openvla", "prismatic"]:
                         # Get preprocessed image
                         img = get_libero_image(obs, resize_size)
 

@@ -212,9 +212,14 @@ OXE_NAMED_MIXTURES: Dict[str, List[Tuple[str, float]]] = {
     
     # ==== LIBERO Shortcut Datasets (xyg Versions) ===
     "libero-spatial-island-viewpoint-400400": [
-        ("v_0400_0400_num1", 1.0),   
-        ("v_0600_0600_num5", 1.0),   
-    ]
+        ("v-0.400-0.400_num1/libero_spatial", 1.0),   
+        ("v-0.600-0.600_num5/libero_spatial", 1.0),   
+    ],
+    
+    "minivla-spatial-check-dataset-1": [
+        ("v-0.500-0.500_num1/libero_spatial", 1.0),   
+        ("v-0.500-0.500_num5/libero_spatial", 1.0),   
+    ],
     
     
 }

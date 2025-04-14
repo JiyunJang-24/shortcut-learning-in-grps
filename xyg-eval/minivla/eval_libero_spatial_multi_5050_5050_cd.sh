@@ -4,15 +4,15 @@ export HF_ENDPOINT=https://hf-mirror.com
 export CUDA_DEVICE_ORDER="PCI_BUS_ID"
 conda activate openvla-mini
 
-base_ckpt_dir=/mnt/hdd3/xingyouguang/projects/robotics/openvla-mini/logs/2025-4-13/23-8-31_libero_qwen_pretrain_test2/prism-qwen25-dinosiglip-224px+0_5b+mx-libero-90+n0+b8+x7/checkpoints
+base_ckpt_dir=/mnt/hdd3/xingyouguang/projects/robotics/openvla-mini/logs/2025-4-14/10-51-3_libero_qwen_pretrain_test2/prism-qwen25-dinosiglip-224px+0_5b+mx-libero-90+n0+b8+x7/checkpoints
 # /mnt/hdd3/xingyouguang/projects/robotics/lerobot/outputs/train/2025-03-26/21-24-06_diffusion/checkpoints/030000/pretrained_model
 # ls ${base_ckpt_dir} 写成一个 array数组
 ckpt_paths=($(ls "${base_ckpt_dir}"))
-min_weight1=0.40
-max_weight1=0.40
+min_weight1=0.500
+max_weight1=0.500
 task1_id=0
-min_weight2=0.60
-max_weight2=0.60
+min_weight2=0.500
+max_weight2=0.500
 task2_id=4
 mid_number1="$(echo "scale=3; ($min_weight1 + $max_weight2) / 2" | bc)"
 mid_number2="${mid_number1}"
@@ -123,7 +123,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
     fi
 
     # if sub_dir != step-010000-epoch-09-loss=0.1884.pt and sub_dir != step-006000-epoch-09-loss=0.1884.pt, continue
-    if [ "${sub_dir}" != "step-010000-epoch-09-loss=0.1884.pt" ] && [ "${sub_dir}" != "step-005000-epoch-04-loss=0.0613.pt" ]; then
+    if [ "${sub_dir}" != "step-005000-epoch-24-loss=0.4082.pt" ] ; then
         continue
     fi
 

@@ -13,6 +13,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 import dlimp as dl
 import numpy as np
 import os
+import torch
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
@@ -517,6 +518,12 @@ def make_interleaved_dataset(
         _, dataset_statistics = make_dataset_from_rlds(**data_kwargs, train=train)
         dataset_sizes.append(dataset_statistics["num_transitions"])
         all_dataset_statistics[dataset_kwargs["name"]] = dataset_statistics
+
+    # xyg added
+    if len(dataset_kwargs_list) == 2 and 'libero_spatial' in dataset_kwargs_list[0]['name'] and 'libero_spatial' in dataset_kwargs_list[1]['name']:
+        for k in all_dataset_statistics[dataset_kwargs_list[0]['name']].keys():
+            if k not in ["num_transitions", "num_trajectories"]:
+                all_dataset_statistics[dataset_kwargs_list[1]['name']][k] = copy.deepcopy(all_dataset_statistics[dataset_kwargs_list[0]['name']][k])
 
     # Get the indices of the "primary" datasets (i.e., datasets with sample_weight == 1.0)
     primary_dataset_indices = np.array([idx for idx in range(len(sample_weights)) if sample_weights[idx] == 1.0])

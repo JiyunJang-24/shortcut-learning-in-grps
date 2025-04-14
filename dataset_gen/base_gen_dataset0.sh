@@ -16,10 +16,10 @@ vmin=0.400
 vmax=0.400
 num_tasks_in_suite=1
 specify_task_id=0
-number_demo_per_task=20
-demo_repeat_times=10
+number_demo_per_task=50
+demo_repeat_times=1
 
-if [ 1 -eq 2 ]; then
+if [ 1 -eq 1 ]; then
     python experiments/robot/libero/regenerate_libero_hdf5_lerobot_dataset_repeat.py \
         --libero_task_suite $libero_task_suite \
         --libero_raw_data_dir $libero_raw_data_dir \
@@ -44,7 +44,7 @@ else
     hdf5_dir="${libero_base_save_dir}_full_hdf5"
     rlds_dir="${libero_base_save_dir}_full_rlds"
 fi
-user_name="xyg_$(echo $viewpoint_rotate_lower_bound | awk '{printf "%.1f\n", $1}')_$(echo $viewpoint_rotate_upper_bound | awk '{printf "%.1f\n", $1}')"
+user_name="xyg_$(echo ${number_demo_per_task} | awk '{printf "%02d\n", $1}')_$(echo ${demo_repeat_times} | awk '{printf "%02d\n", $1}')_$(echo $viewpoint_rotate_lower_bound | awk '{printf "%.1f\n", $1}')_$(echo $viewpoint_rotate_upper_bound | awk '{printf "%.1f\n", $1}')"
 viewpoint_path="v-$(echo $vmin | awk '{printf "%.3f\n", $1}')-$(echo $vmax | awk '{printf "%.3f\n", $1}')_num$(($specify_task_id+1))"
 
 echo "${hdf5_dir}/${user_name}/${viewpoint_path}"

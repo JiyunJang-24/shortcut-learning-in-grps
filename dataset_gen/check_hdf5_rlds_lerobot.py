@@ -53,6 +53,9 @@ def main():
     Image.fromarray(lerobot_image1).save('tmp_dir/lerobot_image1.png')
     Image.fromarray(lerobot_image2).save('tmp_dir/lerobot_image2.png')
     
+    
+    
+    
     import ipdb; ipdb.set_trace()
     print('this is a test')
 

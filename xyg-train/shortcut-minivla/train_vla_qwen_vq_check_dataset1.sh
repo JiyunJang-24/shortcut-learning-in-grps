@@ -12,7 +12,8 @@ conda activate openvla-mini
 # Next we train MiniVLA based on this Prism base VLM on LIBERO-90.
 # Run from the root of the repository
 # LIBERO_DATA_ROOT=/mnt/nfs/CMG/xiejunlin/datasets/Robotics/libero
-LIBERO_DATA_ROOT="/mnt/hdd3/xingyouguang/datasets/robotics/libero/libero_spatial_no_noops_island_1_rlds/xyg_15.0_65.0"
+DATA_MIX="minivla-spatial-check-dataset-1"
+LIBERO_DATA_ROOT="/mnt/hdd3/xingyouguang/datasets/robotics/libero/libero_spatial_no_noops_island_1_rlds/xyg_50_01_15.0_65.0"
 LOG_ROOT=libero_qwen_pretrain_test2
 WANDB_PROJECT="libero_qwen2"
 WANDB_ENTITY="1207481522" # should be you user name or team name in w&b account
@@ -24,9 +25,6 @@ for ((i=1; i<WORLD_SIZE; i++)); do
     CUDA_VISIBLE_DEVICES_LIST="${CUDA_VISIBLE_DEVICES_LIST},$((i+1))"
 done
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_LIST}"
-
-
-DATA_MIX="libero-spatial-island-viewpoint-400400"
 
 CKPT_PATH='/home/xingyouguang/.cache/huggingface/hub/models--Stanford-ILIAD--prism-qwen25-extra-dinosiglip-224px-0_5b/snapshots/5cfd2cc6da00c06e0be7abf35d43ec792d8e9498'
 torchrun --standalone --nnodes 1 --nproc-per-node "${WORLD_SIZE}" --master-addr=${MASTER_ADDR} --master-port=${MASTER_PORT} vla-scripts/train.py \

@@ -116,7 +116,7 @@ def main(args):
     base_num = args.base_num
     
     # "xyg/v-0.25-0.25-c-0.25-0.25"
-    user_name = f"{args.user_name}_{viewpoint_rotate_lower_bound:.1f}_{viewpoint_rotate_upper_bound:.1f}"
+    user_name = f"{args.user_name}_{number_demo_per_task:02d}_{demo_repeat_times:02d}_{viewpoint_rotate_lower_bound:.1f}_{viewpoint_rotate_upper_bound:.1f}"
     if need_color_change:
         if args.suffix is not None and args.suffix != "":
             repo_name = f"{user_name}/v-{viewpoint_rotate_min_interpolate_weight:.3f}-{viewpoint_rotate_max_interpolate_weight:.3f}-c-{color_scale_min_interpolate_weight:.3f}-{color_scale_max_interpolate_weight:.3f}-{args.suffix}"
@@ -540,7 +540,6 @@ def main(args):
             num_replays += 1
             
             if sum(done_list) != 0 and sum(done_list) != len(done_list):
-                # import ipdb; ipdb.set_trace()
                 pass
             if done_list[-1]:
                 all_done_list.append(done_list)
