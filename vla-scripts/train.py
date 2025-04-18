@@ -17,8 +17,9 @@ Run with:
 
 import json
 import os
-os.environ["MASTER_ADDR"] = "127.0.0.1"
-os.environ["MASTER_PORT"] = "29500"
+if '/mnt/hdd3' in os.getcwd():
+    os.environ["MASTER_ADDR"] = "127.0.0.1"
+    os.environ["MASTER_PORT"] = "29500"
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
