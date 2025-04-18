@@ -17,8 +17,9 @@ Run with:
 
 import json
 import os
-os.environ["MASTER_ADDR"] = "127.0.0.1"
-os.environ["MASTER_PORT"] = "29500"
+if '/mnt/hdd3' in os.getcwd():
+    os.environ["MASTER_ADDR"] = "127.0.0.1"
+    os.environ["MASTER_PORT"] = "29500"
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -147,8 +148,10 @@ def train(cfg: TrainConfig) -> None:
     overwatch.info('"Do or do not; there is no try."', ctx_level=1)
     hf_token = cfg.hf_token.read_text().strip() if isinstance(cfg.hf_token, Path) else os.environ[cfg.hf_token]
     worker_init_fn = set_global_seed(cfg.seed, get_worker_init_fn=True)
-    os.makedirs(run_dir := (cfg.run_root_dir / cfg.run_id), exist_ok=True)
-    os.makedirs(cfg.run_root_dir / cfg.run_id / "checkpoints", exist_ok=True)
+    run_dir = (cfg.run_root_dir / cfg.run_id)
+    if torch.distributed.get_rank() == 0:
+        os.makedirs(run_dir, exist_ok=True)
+        os.makedirs(cfg.run_root_dir / cfg.run_id / "checkpoints", exist_ok=True)
 
     # Save Configuration =>> additionally save a JSON version for later HF Integration
     if overwatch.is_rank_zero():
