@@ -15,6 +15,19 @@ from lerobot.common.datasets.lerobot_dataset import (
 def main():
     step_num=80
     
+    hdf5_data_path = r"/mnt/hdd3/xingyouguang/datasets/robotics/libero2/libero_spatial_no_noops"
+    hdf5_data_file = h5py.File(os.path.join(hdf5_data_path, "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate_demo.hdf5"), "r")
+    hdf5_data = hdf5_data_file["data"]
+    hdf5_image1 = hdf5_data["demo_0"]["obs"]["agentview_rgb"][()][step_num][::-1]
+    hdf5_image2 = hdf5_data["demo_0"]["obs"]["eye_in_hand_rgb"][()][step_num][::-1]
+    hdf5_action = hdf5_data["demo_0"]["actions"][()][step_num]
+    hdf5_state = hdf5_data["demo_0"]["states"][()][step_num]
+    Image.fromarray(hdf5_image1).save('tmp_dir/hdf5_image1.png')
+    Image.fromarray(hdf5_image2).save('tmp_dir/hdf5_image2.png')
+    import ipdb; ipdb.set_trace()
+    
+    
+    
     repo_name = "xyg_15.0_65.0_test/v-0.250-0.450_num1"
     # hdf5    
     hdf5_data_path = r"/mnt/hdd3/xingyouguang/datasets/robotics/libero/libero_spatial_no_noops_island_1_hdf5"

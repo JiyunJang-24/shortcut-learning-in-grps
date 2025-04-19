@@ -162,6 +162,7 @@ visualize-*-full/
 experiments-island/
 experiments/logs*/
 experiments-cd/
+experiments-dp/
 experiments-test/
 experiments-mini/
 v-0.*_num*/
@@ -169,3 +170,6 @@ data_create_v_back/
 data_create_v_back2/
 tmp_dir/
 tmp_dir2/
+xyg_20_10_15.0_65.0/
+xyg_50_02_-10.0_90.0/
+xyg_50_02_15.0_65.0/

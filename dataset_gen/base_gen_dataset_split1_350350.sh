@@ -10,14 +10,14 @@ libero_task_suite="libero_spatial"
 libero_raw_data_dir="/mnt/hdd3/xingyouguang/datasets/robotics/libero/libero_spatial"
 libero_base_save_dir="${libero_raw_data_dir}_no_noops_island"
 
-viewpoint_rotate_lower_bound=15.0
-viewpoint_rotate_upper_bound=65.0
-vmin=0.400
-vmax=0.400
-num_tasks_in_suite=1
-specify_task_id=0
-number_demo_per_task=20
-demo_repeat_times=10
+viewpoint_rotate_lower_bound=-10.0
+viewpoint_rotate_upper_bound=90.0
+vmin=0.350
+vmax=0.350
+num_tasks_in_suite=5
+specify_task_id=0,1,3,5,8
+number_demo_per_task=50
+demo_repeat_times=2
 
 if [ 1 -eq 1 ]; then
     python experiments/robot/libero/regenerate_libero_hdf5_lerobot_dataset_repeat_split.py \
@@ -40,17 +40,26 @@ export CUDA_VISIBLE_DEVICES=""
 if [ $num_tasks_in_suite -eq 1 ]; then
     hdf5_dir="${libero_base_save_dir}_1_hdf5"
     rlds_dir="${libero_base_save_dir}_1_rlds"
+elif [ $num_tasks_in_suite -eq 5 ]; then
+    hdf5_dir="${libero_base_save_dir}_split_hdf5"
+    rlds_dir="${libero_base_save_dir}_split_rlds"
 else
     hdf5_dir="${libero_base_save_dir}_full_hdf5"
     rlds_dir="${libero_base_save_dir}_full_rlds"
 fi
 user_name="xyg_$(echo ${number_demo_per_task} | awk '{printf "%02d\n", $1}')_$(echo ${demo_repeat_times} | awk '{printf "%02d\n", $1}')_$(echo $viewpoint_rotate_lower_bound | awk '{printf "%.1f\n", $1}')_$(echo $viewpoint_rotate_upper_bound | awk '{printf "%.1f\n", $1}')"
-viewpoint_path="v-$(echo $vmin | awk '{printf "%.3f\n", $1}')-$(echo $vmax | awk '{printf "%.3f\n", $1}')_num$(($specify_task_id+1))"
+viewpoint_path="v-$(echo $vmin | awk '{printf "%.3f\n", $1}')-$(echo $vmax | awk '{printf "%.3f\n", $1}')_${specify_task_id}"
 
 echo "${hdf5_dir}/${user_name}/${viewpoint_path}"
 echo "${rlds_dir}/${user_name}/${viewpoint_path}"
 
 export XYG_HDF5_PATH="${hdf5_dir}/${user_name}/${viewpoint_path}"
+
+# check "${rlds_dir}/${user_name}/${viewpoint_path}" 和 "${hdf5_dir}/${user_name}/${viewpoint_path}" 是否存在
+if [[ -d "${rlds_dir}/${user_name}/${viewpoint_path}" ]] || [[ ! -d "${hdf5_dir}/${user_name}/${viewpoint_path}" ]] ; then
+    echo "WARNING: ${rlds_dir}/${user_name}/${viewpoint_path} found or ${hdf5_dir}/${user_name}/${viewpoint_path} not found"
+    exit
+fi
 
 tfds_start_time=$(date +%s)
 tfds build --data_dir ${rlds_dir}/${user_name}/${viewpoint_path}

@@ -4,35 +4,36 @@ export HF_ENDPOINT=https://hf-mirror.com
 export CUDA_DEVICE_ORDER="PCI_BUS_ID"
 conda activate openvla-mini
 
-base_ckpt_dir=/mnt/hdd3/xingyouguang/projects/robotics/openvla-mini/logs/2025-4-14/10-51-3_libero_qwen_pretrain_test2/prism-qwen25-dinosiglip-224px+0_5b+mx-libero-90+n0+b8+x7/checkpoints
-# /mnt/hdd3/xingyouguang/projects/robotics/lerobot/outputs/train/2025-03-26/21-24-06_diffusion/checkpoints/030000/pretrained_model
-# ls ${base_ckpt_dir} 写成一个 array数组
-ckpt_paths=($(ls "${base_ckpt_dir}"))
-min_weight1=0.500
-max_weight1=0.500
+min_weight1=0.400
+max_weight1=0.550
 task1_id=0
-min_weight2=0.500
-max_weight2=0.500
+min_weight2=0.450
+max_weight2=0.600
 task2_id=4
-mid_number1="$(echo "scale=3; ($min_weight1 + $max_weight2) / 2" | bc)"
-mid_number2="${mid_number1}"
-sleep_time=15
-
-local_log_dir="./experiments-test/logs-${min_weight1}-${max_weight1}-${task1_id}-${min_weight2}-${max_weight2}-${task2_id}"
-num_trials_per_task=15
-num_tasks_in_suite=1
-
-delta_shift=0.01
-
 viewpoint_rotate_lower_bound=15.0
 viewpoint_rotate_upper_bound=65.0
 
-need_inner_interpolate=False
+model_family="diffusion"
+base_ckpt_dir=/mnt/hdd3/xingyouguang/projects/robotics/lerobot/outputs/train/2025-04-16/11-00-50_diffusion/checkpoints
+# /mnt/hdd3/xingyouguang/projects/robotics/lerobot/outputs/train/2025-03-26/21-24-06_diffusion/checkpoints/030000/pretrained_model
+# ls ${base_ckpt_dir} 写成一个 array数组
+
+need_inner_interpolate=True
 need_outer_extension=False
 need_10000_multi_ckpt=False
-model_family="prismatic"
+num_trials_per_task=25
+num_tasks_in_suite=1
+local_log_dir="./experiments-dp/logs-${min_weight1}-${max_weight1}-${task1_id}-${min_weight2}-${max_weight2}-${task2_id}"
+
+# the others
+mid_number1="$(echo "scale=3; ($min_weight1 + $max_weight2) / 2" | bc)"
+mid_number2="${mid_number1}"
+
+delta_shift=0.01
+ckpt_paths=($(ls "${base_ckpt_dir}"))
 
 echo "$min_weight1 $max_weight1 $task1_id $min_weight2 $max_weight2 $task2_id, mid_number1: $mid_number1, mid_number2: $mid_number2"
+sleep_time=30
 
 
 # 定义一个函数，输入为 view_point, task, 输出为 cur_viewpoint_weight_min, cur_viewpoint_weight_max, cur_task_id
@@ -91,7 +92,6 @@ function get_cur_weight_and_task_id() {
     local viewpoint=$1
     local task=$2
     # viewpoint, A, B, C, AS1, AS2, BS1, BS2
-    # color, A, B, C, AS1, AS2, BS1, BS2
     # task, A, B
 
     # 从get_single_weight中接收cur_viewpoint_weight_min, cur_viewpoint_weight_max
@@ -114,25 +114,33 @@ for sub_dir in "${ckpt_paths[@]}"; do
 
     echo "sub_dir: ${sub_dir}"
 
-    # if sub_dir != step-010000-epoch-09-loss=0.1884.pt and sub_dir != step-006000-epoch-09-loss=0.1884.pt, continue
-    if [ "${sub_dir}" == "step-002500-epoch-12-loss=0.2311.pt" ] || [ "${sub_dir}" == "step-005000-epoch-24-loss=0.4082.pt" ] || [ "${sub_dir}" == "step-007500-epoch-36-loss=0.5079.pt" ] || [ "${sub_dir}" == "step-010000-epoch-48-loss=0.6917.pt" ]; then
+    if [ "${sub_dir}" == "last" ]; then
         continue
     fi
 
-    # if ckpt_paths 无法整除 10000，continue
-    # 因为 sub_dir 是 030000, 040000, 050000, ..., 先把前置的 0 去掉
-    # sub_dir_without_prefix=$(echo "${sub_dir}" | sed 's/^0*//')
-    # # echo "???: ${sub_dir}. $((sub_dir_without_prefix % 10000))", if need_10000_multi_ckpt
-    # if [ $((sub_dir_without_prefix % 10000)) -ne 0 ] && [ "${need_10000_multi_ckpt}" == "True" ]; then
+    # if [ "${sub_dir}" == "005000" ]; then
     #     continue
     # fi
+
+    # if sub_dir != step-010000-epoch-09-loss=0.1884.pt and sub_dir != step-006000-epoch-09-loss=0.1884.pt, continue
+    # if [ "${sub_dir}" != "step-010000-epoch-09-loss=0.1884.pt" ] && [ "${sub_dir}" != "step-005000-epoch-04-loss=0.0613.pt" ]; then
+    #     continue
+    # fi
+
+    # if ckpt_paths 无法整除 10000，continue
+    # 因为 sub_dir 是 030000, 040000, 050000, ..., 先把前置的 0 去掉
+    sub_dir_without_prefix=$(echo "${sub_dir}" | sed 's/^0*//')
+    # # echo "???: ${sub_dir}. $((sub_dir_without_prefix % 10000))", if need_10000_multi_ckpt
+    if [ $((sub_dir_without_prefix % 10000)) -ne 0 ] && [ "${need_10000_multi_ckpt}" == "True" ]; then
+        continue
+    fi
 
     # if sub_dir != 010000, continue
     # if [ "${sub_dir}" != "015000" ]; then
     #     continue
     # fi
 
-    ckpt_path="${base_ckpt_dir}/${sub_dir}"
+    ckpt_path="${base_ckpt_dir}/${sub_dir}/pretrained_model"
 
     # AA
     python experiments/robot/libero/run_libero_eval_dp_minivla.py \
@@ -274,7 +282,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
             --seed 7 &
 
     fi
-
+    # wait
 done
 
 wait
