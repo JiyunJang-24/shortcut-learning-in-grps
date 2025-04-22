@@ -103,10 +103,10 @@ for sub_dir in "${ckpt_paths[@]}"; do
         continue
     fi
 
-    i=$((i+1))
-    if [[ $i -ne 4 ]] ; then 
-        continue
-    fi
+    # i=$((i+1))
+    # if [[ $i -ne 4 ]] ; then 
+    #     continue
+    # fi
 
     if [ "${sub_dir}" == "step-002500-epoch-03-loss=1.0648.pt" ]; then  # 测过了
         continue
