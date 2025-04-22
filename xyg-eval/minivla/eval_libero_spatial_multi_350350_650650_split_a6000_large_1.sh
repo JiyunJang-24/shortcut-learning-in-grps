@@ -4,15 +4,15 @@ export HF_ENDPOINT=https://hf-mirror.com
 export CUDA_DEVICE_ORDER="PCI_BUS_ID"
 conda activate openvla-mini
 
-base_ckpt_dir=logs/2025-4-17/7-41-32_libero_qwen_pretrain_split_large/prism-qwen25-dinosiglip-224px+0_5b+mx-libero-90+n1+b16+x7/checkpoints
+base_ckpt_dir=logs/2025-4-19/5-9-12_libero_qwen_pretrain_split_large/prism-qwen25-dinosiglip-224px+0_5b+mx-libero-90+n1+b16+x7/checkpoints
 # /mnt/hdd3/xingyouguang/projects/robotics/lerobot/outputs/train/2025-03-26/21-24-06_diffusion/checkpoints/030000/pretrained_model
 # ls ${base_ckpt_dir} 写成一个 array数组
 ckpt_paths=($(ls "${base_ckpt_dir}"))
-min_weight1=0.200
-max_weight1=0.200
+min_weight1=0.350
+max_weight1=0.350
 task1_id_arr=(0 1 3 5 8)
-min_weight2=0.800
-max_weight2=0.800
+min_weight2=0.650
+max_weight2=0.650
 task2_id_arr=(2 4 6 7 9)
 mid_number1="$(echo "scale=3; ($min_weight1 + $max_weight2) / 2" | bc)"
 mid_number2="${mid_number1}"
