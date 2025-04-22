@@ -505,6 +505,7 @@ def main(args):
                     if done:
                         rep_idx += 1
                         cur_demo_success += 1
+                        time_cal_1 = time.time()
                         for lerobot_idx in range(len(states)):
                             dataset.add_frame(
                                 {
@@ -518,8 +519,11 @@ def main(args):
                             )
                         
                         dataset.save_episode()
+                        time_cal_2 = time.time()
+                        TIME_COUNTER['lerobot_gen'] += time_cal_2 - time_cal_1
 
                         if args.need_hdf5:
+                            time_cal_1 = time.time()
                             dones = np.zeros(len(actions)).astype(np.uint8)
                             dones[-1] = 1
                             rewards = np.zeros(len(actions)).astype(np.uint8)
@@ -539,8 +543,11 @@ def main(args):
                             ep_data_grp.create_dataset("robot_states", data=np.stack(robot_states, axis=0))
                             ep_data_grp.create_dataset("rewards", data=rewards)
                             ep_data_grp.create_dataset("dones", data=dones)
+                            time_cal_2 = time.time()
+                            TIME_COUNTER['hdf5_gen'] += time_cal_2 - time_cal_1
 
                         if args.show_diff:
+                            time_cal_1 = time.time()
                             cur_agentview_rgb = agentview_images
                             ori_agentview_rgb = demo_data["obs"]["agentview_rgb"][()]
                             ori_agentview_rgb = [ori_agentview_rgb[j] for j in range(len(ori_agentview_rgb))]
@@ -558,7 +565,9 @@ def main(args):
                                 
                                 os.makedirs(os.path.join(repo_name, f"{args.libero_task_suite}", f"{task.name}"), exist_ok=True)
                                 Image.fromarray(all_agentview_rgb).save(os.path.join(repo_name, f"{args.libero_task_suite}", f"{task.name}",f"demo_{i}_{rep_idx}.jpg"))
-                        
+                            time_cal_2 = time.time()
+                            TIME_COUNTER['show_diff'] += time_cal_2 - time_cal_1
+                            
                 real_success_demo_num += 1
 
             num_replays += 1

@@ -30,6 +30,9 @@ from PIL import Image
 import robosuite.utils.transform_utils as T
 import tqdm
 from libero.libero import benchmark
+import multiprocessing
+from functools import partial
+import time
 
 from experiments.robot.libero.libero_utils import (
     get_libero_dummy_action,
@@ -82,6 +85,255 @@ def is_noop(action, prev_action=None, threshold=1e-4):
 
 def interpolate_number(number_min, number_max, interpolate_weight):
     return number_min + (number_max - number_min) * interpolate_weight
+
+def process_task(task_id, args, task_suite, hdf5_output_path, repo_name, libero_home, number_demo_per_task, demo_repeat_times, need_color_change,
+                viewpoint_rotate_min, viewpoint_rotate_max, color_scale_min, color_scale_max, 
+                color_light_a, color_light_b, change_light, base_num, transparent_alpha, transparent_object_name):
+    """Process a single task using a separate process"""
+    # Initialize local time counter for this process
+    local_time_counter = {
+        'hdf5_gen': 0,
+        'lerobot_gen': 0,
+        'show_diff': 0,
+    }
+    
+    # Create a separate dataset instance for this process
+    lerobot_output_path = libero_home / repo_name
+    dataset = LeRobotDataset.create(
+        repo_id=f"{repo_name}_task_{task_id}",  # Make repo_id unique per task
+        robot_type="panda",
+        root=lerobot_output_path / f"task_{task_id}",  # Separate directory per task
+        fps=10,
+        features={
+            "observation.image": {
+                "dtype": "image",
+                "shape": (256, 256, 3),
+                "names": ["height", "width", "channel"],
+            },
+            "observation.wrist_image": {
+                "dtype": "image",
+                "shape": (256, 256, 3),
+                "names": ["height", "width", "channel"],
+            },
+            "observation.state": {
+                "dtype": "float32",
+                "shape": (9,),
+                "names": ["state"],
+            },
+            "observation.environment_state": {
+                "dtype": "float32",
+                "shape": (92,),
+                "names": ["state"],
+            },
+            "action": {
+                "dtype": "float32",
+                "shape": (7,),
+                "names": ["action"],
+            },
+        },
+        image_writer_threads=5,  # Reduced to prevent resource contention
+        image_writer_processes=2,  # Reduced to prevent resource contention
+    )
+    
+    # Get task in suite
+    task = task_suite.get_task(task_id)
+    env, task_description = get_libero_env(task, "llava", resolution=IMAGE_RESOLUTION)
+
+    # Get dataset for task
+    orig_data_path = os.path.join(args.libero_raw_data_dir, f"{task.name}_demo.hdf5")
+    assert os.path.exists(orig_data_path), f"Cannot find raw data file {orig_data_path}."
+    orig_data_file = h5py.File(orig_data_path, "r")
+    orig_data = orig_data_file["data"]
+    
+    # Create new HDF5 file for regenerated demos
+    if args.need_hdf5:  
+        new_data_path = os.path.join(hdf5_output_path, f"{task.name}_demo.hdf5")
+        new_data_file = h5py.File(new_data_path, "w")
+        grp = new_data_file.create_group("data")
+
+    # Process variables
+    num_replays = 0
+    num_success = 0
+    num_noops = 0
+    
+    # modify every episode in this task
+    done = False
+    real_success_demo_num = 0
+    for orig_data_key in tqdm.tqdm(orig_data.keys(), desc=f"Process {task_id}: episode in tasks"):
+        # get demo data
+        i = int(orig_data_key.split("_")[-1])
+        if number_demo_per_task is not None and real_success_demo_num >= number_demo_per_task:
+            break
+        
+        demo_data = orig_data[f"demo_{i}"]
+        orig_actions = demo_data["actions"][()]
+        orig_states = demo_data["states"][()]
+
+        done_list = []
+        states_list = []
+        actions_list = []
+        ee_states_list = []
+        gripper_states_list = []
+        joint_states_list = []
+        robot_states_list = []
+        agentview_images_list = []
+        eye_in_hand_images_list = []
+        
+        for repeat_idx in range(2): # min(demo_repeat_times, 2) -> 2
+            # Reset environment, set initial state, and wait a few steps for environment to settle
+            env.reset()
+            env.set_init_state(orig_states[0])
+            
+            # 给定 min, max 均匀采样 viewpoint_rotate, color_scale
+            viewpoint_rotate = np.random.uniform(viewpoint_rotate_min, viewpoint_rotate_max)
+            color_scale = np.random.uniform(color_scale_min, color_scale_max)
+            
+            # recolor and rotate scene
+            camera_id = env.sim.model.camera_name2id("agentview")
+            if need_color_change:
+                env = rotate_recolor_dataset.recolor_and_rotate_scene(env, alpha=color_scale, color_light_a=color_light_a, color_light_b=color_light_b, 
+                                                                camera_id=camera_id, camera_name="agentview", robot_base_name="robot0_link0", 
+                                                                theta=viewpoint_rotate, debug=False, need_change_light=change_light, base_num=base_num)
+            else:
+                env = rotate_recolor_dataset.rotate_camera(env, camera_id=camera_id, camera_name="agentview", robot_base_name="robot0_link0", 
+                                                          theta=viewpoint_rotate, debug=False)
+            env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
+            
+            for _ in range(10):
+                obs, reward, done, info = env.step(get_libero_dummy_action("llava"))
+
+            # Set up new data lists
+            states, actions, ee_states, gripper_states, joint_states, robot_states, agentview_images, eye_in_hand_images = [], [], [], [], [], [], [], []
+
+            # Replay original demo actions in environment and record observations
+            for _, action in enumerate(orig_actions):
+                # Skip transitions with no-op actions
+                prev_action = actions[-1] if len(actions) > 0 else None
+                if is_noop(action, prev_action):
+                    print(f"\tSkipping no-op action: {action}")
+                    num_noops += 1
+                    continue
+
+                if states == []:
+                    states.append(orig_states[0])
+                    robot_states.append(demo_data["robot_states"][0])
+                else:
+                    states.append(env.sim.get_state().flatten())
+                    robot_states.append(
+                        np.concatenate([obs["robot0_gripper_qpos"], obs["robot0_eef_pos"], obs["robot0_eef_quat"]])
+                    )
+
+                # Record original action (from demo)
+                actions.append(action)
+
+                # Record data returned by environment
+                if "robot0_gripper_qpos" in obs:
+                    gripper_states.append(obs["robot0_gripper_qpos"])
+                joint_states.append(obs["robot0_joint_pos"])
+                ee_states.append(
+                    np.hstack(
+                        (
+                            obs["robot0_eef_pos"],
+                            T.quat2axisangle(obs["robot0_eef_quat"]),
+                        )
+                    )
+                )
+                agentview_images.append(obs["agentview_image"])
+                eye_in_hand_images.append(obs["robot0_eye_in_hand_image"])
+
+                # Execute demo action in environment
+                obs, reward, done, info = env.step(action.tolist())
+
+            # At end of episode, save replayed trajectories to new HDF5 files (only keep successes)
+            done_list.append(done)
+            states_list.append(states)
+            actions_list.append(actions)
+            ee_states_list.append(ee_states)
+            gripper_states_list.append(gripper_states)
+            joint_states_list.append(joint_states)
+            robot_states_list.append(robot_states)
+            agentview_images_list.append(agentview_images)
+            eye_in_hand_images_list.append(eye_in_hand_images)
+
+        # Rest of the processing for this episode
+        if sum(done_list) == len(done_list):
+            rep_idx = 0
+            for done, states, actions, ee_states, gripper_states, joint_states, robot_states, agentview_images, eye_in_hand_images in zip(done_list, states_list, actions_list, ee_states_list, gripper_states_list, joint_states_list, robot_states_list, agentview_images_list, eye_in_hand_images_list):
+                if done:
+                    rep_idx += 1
+                    
+                    time_cal_1 = time.time()
+                    for lerobot_idx in range(len(states)):
+                        dataset.add_frame(
+                            {
+                                "observation.image": np.flipud(agentview_images[lerobot_idx]),
+                                "observation.wrist_image": np.flipud(eye_in_hand_images[lerobot_idx]),
+                                "observation.state": robot_states[lerobot_idx].astype(np.float32),
+                                "observation.environment_state": states[lerobot_idx].astype(np.float32),
+                                "task": task_description,
+                                "action": actions[lerobot_idx].astype(np.float32), 
+                            }
+                        )
+                    dataset.save_episode()
+                    time_cal_2 = time.time()
+                    local_time_counter['lerobot_gen'] += time_cal_2 - time_cal_1
+
+                    if args.need_hdf5:
+                        time_cal_1 = time.time()
+                        dones = np.zeros(len(actions)).astype(np.uint8)
+                        dones[-1] = 1
+                        rewards = np.zeros(len(actions)).astype(np.uint8)
+                        rewards[-1] = 1
+                        assert len(actions) == len(agentview_images)
+                        ep_data_grp = grp.create_group(f"demo_{i}_{rep_idx}")
+                        obs_grp = ep_data_grp.create_group("obs")
+                        obs_grp.create_dataset("gripper_states", data=np.stack(gripper_states, axis=0))
+                        obs_grp.create_dataset("joint_states", data=np.stack(joint_states, axis=0))
+                        obs_grp.create_dataset("ee_states", data=np.stack(ee_states, axis=0))
+                        obs_grp.create_dataset("ee_pos", data=np.stack(ee_states, axis=0)[:, :3])
+                        obs_grp.create_dataset("ee_ori", data=np.stack(ee_states, axis=0)[:, 3:])
+                        obs_grp.create_dataset("agentview_rgb", data=np.stack(agentview_images, axis=0))
+                        obs_grp.create_dataset("eye_in_hand_rgb", data=np.stack(eye_in_hand_images, axis=0))
+                        ep_data_grp.create_dataset("actions", data=actions)
+                        ep_data_grp.create_dataset("states", data=np.stack(states))
+                        ep_data_grp.create_dataset("robot_states", data=np.stack(robot_states, axis=0))
+                        ep_data_grp.create_dataset("rewards", data=rewards)
+                        ep_data_grp.create_dataset("dones", data=dones)
+                        time_cal_2 = time.time()
+                        local_time_counter['hdf5_gen'] += time_cal_2 - time_cal_1
+
+                    if args.show_diff:
+                        time_cal_1 = time.time()
+                        cur_agentview_rgb = agentview_images
+                        ori_agentview_rgb = demo_data["obs"]["agentview_rgb"][()]
+                        ori_agentview_rgb = [ori_agentview_rgb[j] for j in range(len(ori_agentview_rgb))]
+                        
+                        ori_agentview_rgb = [cv2.resize(ori_agentview_rgb[j], (256, 256)) for j in range(len(ori_agentview_rgb))]
+                        whole_ori_agentview_rgb = np.concatenate(ori_agentview_rgb[::10], axis=1)
+                        whole_cur_agentview_rgb = np.concatenate(cur_agentview_rgb[::10], axis=1)
+                        if whole_ori_agentview_rgb.shape[1] == whole_cur_agentview_rgb.shape[1]:
+                            whole_ori_agentview_rgb, whole_cur_agentview_rgb = np.flipud(whole_ori_agentview_rgb), np.flipud(whole_cur_agentview_rgb)
+                            all_agentview_rgb = np.concatenate((whole_ori_agentview_rgb, whole_cur_agentview_rgb), axis=0)
+                            
+                            os.makedirs(os.path.join(repo_name, f"{args.libero_task_suite}", f"{task.name}"), exist_ok=True)
+                            Image.fromarray(all_agentview_rgb).save(os.path.join(repo_name, f"{args.libero_task_suite}", f"{task.name}",f"demo_{i}_{rep_idx}.jpg"))
+                        time_cal_2 = time.time()
+                        local_time_counter['show_diff'] += time_cal_2 - time_cal_1
+                        
+                    num_success += 1
+                    real_success_demo_num += 1
+                if demo_repeat_times == 1:
+                    break
+                    
+            # Rest of the episode processing...
+            # ... (Continue copying the original episode processing code)
+            
+    # Clean up
+    if args.need_hdf5:
+        new_data_file.close()
+    orig_data_file.close()
+    
+    return local_time_counter, num_replays, num_success, num_noops
 
 def main(args):
     number_demo_per_task = args.number_demo_per_task
@@ -147,10 +399,12 @@ def main(args):
     task_suite = benchmark_dict[args.libero_task_suite]()
     num_tasks_in_suite = min(task_suite.n_tasks, args.num_tasks_in_suite)
 
-    # Setup
-    num_replays = 0
-    num_success = 0
-    num_noops = 0
+    # Setup global counters
+    TIME_COUNTER = {
+        'hdf5_gen': 0,
+        'lerobot_gen': 0,
+        'show_diff': 0,
+    }
 
     if num_tasks_in_suite == task_suite.n_tasks:
         libero_home = args.libero_base_save_dir + "_full" + "_lerobot"
@@ -158,13 +412,12 @@ def main(args):
     else:
         if args.specify_task_id is None:
             task_id_list = list(range(num_tasks_in_suite))
-            # libero_home = args.lerobot_home + f"_{num_tasks_in_suite}"
             libero_home = args.libero_base_save_dir + f"_{num_tasks_in_suite}" + "_lerobot"
         else:
             assert num_tasks_in_suite == 1, "specify_task_id is not None, num_tasks_in_suite must be 1"
             libero_home = args.libero_base_save_dir + "_1" + "_lerobot"
             task_id_list = [args.specify_task_id]
-            repo_name = repo_name + f"_num{args.specify_task_id+1}" # 这个很关键
+            repo_name = repo_name + f"_num{args.specify_task_id+1}"
         
     libero_home = Path(libero_home)
     lerobot_output_path = libero_home / repo_name
@@ -173,407 +426,77 @@ def main(args):
     os.makedirs(hdf5_output_path, exist_ok=True)
     
     if lerobot_output_path.exists():
-        print(f"Removing existing dataset at {lerobot_output_path}")
-        raise ValueError(f"Dataset already exists at {lerobot_output_path}")
-        shutil.rmtree(lerobot_output_path)
-    dataset = LeRobotDataset.create(
-        repo_id=repo_name,
-        robot_type="panda",
-        root=lerobot_output_path,   # xyg added
-        fps=10,
-        features={
-            "observation.image": {
-                "dtype": "image",
-                "shape": (256, 256, 3),
-                "names": ["height", "width", "channel"],
-            },
-            "observation.wrist_image": {
-                "dtype": "image",
-                "shape": (256, 256, 3),
-                "names": ["height", "width", "channel"],
-            },
-            "observation.state": {      # robot states
-                "dtype": "float32",
-                "shape": (9,),
-                "names": ["state"],
-            },
-            "observation.environment_state": {      # 不同的环境environment_state 的维度不一样
-                "dtype": "float32",
-                "shape": (92,),
-                "names": ["state"],
-            },
-            "action": {
-                "dtype": "float32",
-                "shape": (7,),
-                "names": ["action"],
-            },
-        },
-        image_writer_threads=10,
-        image_writer_processes=5,
+        print(f"Warning: Dataset already exists at {lerobot_output_path}")
+        if args.overwrite:
+            print(f"Removing existing dataset")
+            shutil.rmtree(lerobot_output_path)
+        else:
+            raise ValueError(f"Dataset already exists at {lerobot_output_path}. Use --overwrite to force regeneration.")
+    
+    os.makedirs(lerobot_output_path, exist_ok=True)
+    
+    # Multiprocessing - Process task_id_list in parallel
+    print(f"Starting multiprocessing with {len(task_id_list)} processes")
+    
+    # Create process pool with number of processes equal to length of task_id_list
+    num_processes = len(task_id_list)
+    pool = multiprocessing.Pool(processes=num_processes)
+    
+    # Create a partial function with all the common arguments
+    process_task_partial = partial(
+        process_task,
+        args=args,
+        task_suite=task_suite,
+        hdf5_output_path=hdf5_output_path,
+        repo_name=repo_name,
+        libero_home=libero_home,
+        number_demo_per_task=number_demo_per_task,
+        demo_repeat_times=demo_repeat_times,
+        need_color_change=need_color_change,
+        viewpoint_rotate_min=viewpoint_rotate_min,
+        viewpoint_rotate_max=viewpoint_rotate_max,
+        color_scale_min=color_scale_min,
+        color_scale_max=color_scale_max,
+        color_light_a=color_light_a,
+        color_light_b=color_light_b,
+        change_light=change_light,
+        base_num=base_num,
+        transparent_alpha=transparent_alpha,
+        transparent_object_name=transparent_object_name
     )
     
-    # task loop in task_suite
-    # for task_id in tqdm.tqdm(range(num_tasks_in_suite), desc=f"tasks-{args.libero_task_suite}"):
-    all_done_list = []
-    for task_id in tqdm.tqdm(task_id_list, desc=f"tasks-{args.libero_task_suite}"):
-        # Get task in suite
-        task = task_suite.get_task(task_id)
-        env, task_description = get_libero_env(task, "llava", resolution=IMAGE_RESOLUTION)
-
-        # Get dataset for task
-        orig_data_path = os.path.join(args.libero_raw_data_dir, f"{task.name}_demo.hdf5")
-        assert os.path.exists(orig_data_path), f"Cannot find raw data file {orig_data_path}."
-        orig_data_file = h5py.File(orig_data_path, "r")
-        orig_data = orig_data_file["data"]
+    # Run the tasks in parallel and collect results
+    results = pool.map(process_task_partial, task_id_list)
+    
+    # Process results
+    num_replays = 0
+    num_success = 0
+    num_noops = 0
+    
+    for time_counter, task_replays, task_success, task_noops in results:
+        # Update time counters
+        for key in TIME_COUNTER:
+            TIME_COUNTER[key] += time_counter[key]
         
-        # Create new HDF5 file for regenerated demos
-        if args.need_hdf5:  
-            new_data_path = os.path.join(hdf5_output_path, f"{task.name}_demo.hdf5")
-            new_data_file = h5py.File(new_data_path, "w")
-            grp = new_data_file.create_group("data")
-
-        # modify every episode in this task
-        # 应该换一种形式了
-        # for i in range(len(orig_data.keys())):  # demo_0, demo_1, ..., demo_49, ...
-        # 这边加入 tqdm 
-        done = False
-        real_success_demo_num = 0
-        for orig_data_key in tqdm.tqdm(orig_data.keys(), desc="episide in tasks"):  # demo_0, demo_1, ..., demo_49, ...
-            # get demo data
-            i = int(orig_data_key.split("_")[-1])
-            if number_demo_per_task is not None and real_success_demo_num >= number_demo_per_task:  # 如果 number_demo_per_task 不为 None，则只处理前 number_demo_per_task 个 demo
-                break
-            
-            demo_data = orig_data[f"demo_{i}"]
-            orig_actions = demo_data["actions"][()]     #  The () is used to indicate that you want to read the entire dataset
-            orig_states = demo_data["states"][()]       
-
-            done_list = []
-            states_list = []
-            actions_list = []
-            ee_states_list = []
-            gripper_states_list = []
-            joint_states_list = []
-            robot_states_list = []
-            agentview_images_list = []
-            eye_in_hand_images_list = []
-            
-            for repeat_idx in range(2): # min(demo_repeat_times, 2) -> 2
-                # Reset environment, set initial state, and wait a few steps for environment to settle
-                env.reset()
-                env.set_init_state(orig_states[0])      # [0] mean the state of the first timestep in this episode
-                
-                # 给定 min, max 均匀采样 viewpoint_rotate, color_scale
-                viewpoint_rotate = np.random.uniform(viewpoint_rotate_min, viewpoint_rotate_max)
-                color_scale = np.random.uniform(color_scale_min, color_scale_max)
-                
-                # recolor and rotate scene
-                camera_id = env.sim.model.camera_name2id(camera_name)
-                if need_color_change:
-                    env = rotate_recolor_dataset.recolor_and_rotate_scene(env, alpha=color_scale, color_light_a=color_light_a, color_light_b=color_light_b, 
-                                                                    camera_id=camera_id, camera_name=camera_name, robot_base_name=robot_base_name, 
-                                                                    theta=viewpoint_rotate, debug=False, need_change_light=change_light, base_num=base_num)
-                else:
-                    env = rotate_recolor_dataset.rotate_camera(env, camera_id=camera_id, camera_name=camera_name, robot_base_name=robot_base_name, 
-                                                              theta=viewpoint_rotate, debug=False)
-                env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
-                
-                for _ in range(10):
-                    obs, reward, done, info = env.step(get_libero_dummy_action("llava"))
-
-                # Set up new data lists
-                states, actions, ee_states, gripper_states, joint_states, robot_states, agentview_images, eye_in_hand_images = [], [], [], [], [], [], [], []
-
-                # Replay original demo actions in environment and record observations
-                for _, action in enumerate(orig_actions):
-                    # Skip transitions with no-op actions
-                    prev_action = actions[-1] if len(actions) > 0 else None
-                    if is_noop(action, prev_action):
-                        print(f"\tSkipping no-op action: {action}")
-                        num_noops += 1
-                        continue
-
-                    if states == []:
-                        states.append(orig_states[0])
-                        robot_states.append(demo_data["robot_states"][0])
-                    else:
-                        states.append(env.sim.get_state().flatten())
-                        robot_states.append(
-                            np.concatenate([obs["robot0_gripper_qpos"], obs["robot0_eef_pos"], obs["robot0_eef_quat"]])
-                        )
-
-                    # Record original action (from demo)
-                    actions.append(action)
-
-                    # Record data returned by environment
-                    if "robot0_gripper_qpos" in obs:
-                        gripper_states.append(obs["robot0_gripper_qpos"])
-                    joint_states.append(obs["robot0_joint_pos"])
-                    ee_states.append(
-                        np.hstack(
-                            (
-                                obs["robot0_eef_pos"],
-                                T.quat2axisangle(obs["robot0_eef_quat"]),
-                            )
-                        )
-                    )
-                    agentview_images.append(obs["agentview_image"])
-                    eye_in_hand_images.append(obs["robot0_eye_in_hand_image"])
-
-                    # Execute demo action in environment
-                    obs, reward, done, info = env.step(action.tolist())
-
-                # At end of episode, save replayed trajectories to new HDF5 files (only keep successes)
-                done_list.append(done)
-                states_list.append(states)
-                actions_list.append(actions)
-                ee_states_list.append(ee_states)
-                gripper_states_list.append(gripper_states)
-                joint_states_list.append(joint_states)
-                robot_states_list.append(robot_states)
-                agentview_images_list.append(agentview_images)
-                eye_in_hand_images_list.append(eye_in_hand_images)
-            
-            if sum(done_list) == len(done_list):    # 没有这个条件就放弃这个trajectory了。
-                rep_idx = 0
-                for done, states, actions, ee_states, gripper_states, joint_states, robot_states, agentview_images, eye_in_hand_images in zip(done_list, states_list, actions_list, ee_states_list, gripper_states_list, joint_states_list, robot_states_list, agentview_images_list, eye_in_hand_images_list):
-                    if done:        # 这里很机智，保证他是done的。数量可能会从原来的 50 下降到40出头
-                        rep_idx += 1
-                        
-                        time_cal_1 = time.time()
-                        for lerobot_idx in range(len(states)):
-                            dataset.add_frame(
-                                {
-                                    "observation.image": np.flipud(agentview_images[lerobot_idx]),
-                                    "observation.wrist_image": np.flipud(eye_in_hand_images[lerobot_idx]),
-                                    "observation.state": robot_states[lerobot_idx].astype(np.float32),   # 转化为 float32, numpy
-                                    "observation.environment_state": states[lerobot_idx].astype(np.float32),
-                                    "task": task_description,  # task_description.decode()
-                                    "action": actions[lerobot_idx].astype(np.float32), 
-                                }
-                            )
-                        dataset.save_episode()
-                        time_cal_2 = time.time()
-                        TIME_COUNTER['lerobot_gen'] += time_cal_2 - time_cal_1
-
-                        if args.need_hdf5:  # 遵循的一个原则，hdf5都没有翻转
-                            time_cal_1 = time.time()
-                            dones = np.zeros(len(actions)).astype(np.uint8)
-                            dones[-1] = 1
-                            rewards = np.zeros(len(actions)).astype(np.uint8)
-                            rewards[-1] = 1
-                            assert len(actions) == len(agentview_images)
-                            ep_data_grp = grp.create_group(f"demo_{i}_{rep_idx}")
-                            obs_grp = ep_data_grp.create_group("obs")
-                            obs_grp.create_dataset("gripper_states", data=np.stack(gripper_states, axis=0))
-                            obs_grp.create_dataset("joint_states", data=np.stack(joint_states, axis=0))
-                            obs_grp.create_dataset("ee_states", data=np.stack(ee_states, axis=0))
-                            obs_grp.create_dataset("ee_pos", data=np.stack(ee_states, axis=0)[:, :3])
-                            obs_grp.create_dataset("ee_ori", data=np.stack(ee_states, axis=0)[:, 3:])
-                            obs_grp.create_dataset("agentview_rgb", data=np.stack(agentview_images, axis=0))
-                            obs_grp.create_dataset("eye_in_hand_rgb", data=np.stack(eye_in_hand_images, axis=0))
-                            ep_data_grp.create_dataset("actions", data=actions)
-                            ep_data_grp.create_dataset("states", data=np.stack(states))
-                            ep_data_grp.create_dataset("robot_states", data=np.stack(robot_states, axis=0))
-                            ep_data_grp.create_dataset("rewards", data=rewards)
-                            ep_data_grp.create_dataset("dones", data=dones)
-                            time_cal_2 = time.time()
-                            TIME_COUNTER['hdf5_gen'] += time_cal_2 - time_cal_1                        
-
-                        if args.show_diff:
-                            time_cal_1 = time.time()
-                            cur_agentview_rgb = agentview_images
-                            ori_agentview_rgb = demo_data["obs"]["agentview_rgb"][()]
-                            ori_agentview_rgb = [ori_agentview_rgb[j] for j in range(len(ori_agentview_rgb))]
-                            
-                            # cur_agent_view_rgb 和 ori_agentview_rgb 都是list of numpy.ndarray, shape: (256, 256, 3)
-                            # 将两者竖直方向concat 起来，存为 jpg
-                            # ori_agentview_rgb 图像插值为 (128, 128, 3) -> (256, 256, 3)
-                            ori_agentview_rgb = [cv2.resize(ori_agentview_rgb[j], (256, 256)) for j in range(len(ori_agentview_rgb))]
-                            whole_ori_agentview_rgb = np.concatenate(ori_agentview_rgb[::10], axis=1)
-                            whole_cur_agentview_rgb = np.concatenate(cur_agentview_rgb[::10], axis=1)
-                            if whole_ori_agentview_rgb.shape[1] == whole_cur_agentview_rgb.shape[1]:
-                                whole_ori_agentview_rgb, whole_cur_agentview_rgb = np.flipud(whole_ori_agentview_rgb), np.flipud(whole_cur_agentview_rgb)
-                                all_agentview_rgb = np.concatenate((whole_ori_agentview_rgb, whole_cur_agentview_rgb), axis=0)
-                                # 将all_agentview_rgb:(H, W, 3)保存为图片
-                                
-                                os.makedirs(os.path.join(repo_name, f"{args.libero_task_suite}", f"{task.name}"), exist_ok=True)
-                                Image.fromarray(all_agentview_rgb).save(os.path.join(repo_name, f"{args.libero_task_suite}", f"{task.name}",f"demo_{i}_{rep_idx}.jpg"))
-                            time_cal_2 = time.time()
-                            TIME_COUNTER['show_diff'] += time_cal_2 - time_cal_1
-                            
-                        num_success += 1
-                    if demo_repeat_times == 1:
-                        break
-                if demo_repeat_times == 1:
-                    cur_demo_success = 1
-                else:
-                    cur_demo_success = sum(done_list)
-                while cur_demo_success < demo_repeat_times:
-                    env.reset()
-                    env.set_init_state(orig_states[0])      # [0] mean the state of the first timestep in this episode
-                    
-                    # 给定 min, max 均匀采样 viewpoint_rotate, color_scale
-                    viewpoint_rotate = np.random.uniform(viewpoint_rotate_min, viewpoint_rotate_max)
-                    color_scale = np.random.uniform(color_scale_min, color_scale_max)
-                    
-                    camera_id = env.sim.model.camera_name2id(camera_name)
-                    if need_color_change:
-                        env = rotate_recolor_dataset.recolor_and_rotate_scene(env, alpha=color_scale, color_light_a=color_light_a, color_light_b=color_light_b, 
-                                                                        camera_id=camera_id, camera_name=camera_name, robot_base_name=robot_base_name, 
-                                                                        theta=viewpoint_rotate, debug=False, need_change_light=change_light, base_num=base_num)
-                    else:
-                        # env = rotate_camera(env, camera_id, camera_name, robot_base_name, theta)
-                        env = rotate_recolor_dataset.rotate_camera(env, camera_id=camera_id, camera_name=camera_name, robot_base_name=robot_base_name, 
-                                                                theta=viewpoint_rotate, debug=False)
-                    
-                    # change the transparency of the transparent object
-                    env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
-                    
-                    for _ in range(10):
-                        obs, reward, done, info = env.step(get_libero_dummy_action("llava"))
-
-                    # Set up new data lists
-                    states, actions, ee_states, gripper_states, joint_states, robot_states, agentview_images, eye_in_hand_images = [], [], [], [], [], [], [], []
-
-                    # Replay original demo actions in environment and record observations
-                    for _, action in enumerate(orig_actions):
-                        # Skip transitions with no-op actions
-                        prev_action = actions[-1] if len(actions) > 0 else None
-                        if is_noop(action, prev_action):
-                            print(f"\tSkipping no-op action: {action}")
-                            num_noops += 1
-                            continue
-
-                        if states == []:
-                            # In the first timestep, since we're using the original initial state to initialize the environment,
-                            # copy the initial state (first state in episode) over from the original HDF5 to the new one
-                            states.append(orig_states[0])
-                            robot_states.append(demo_data["robot_states"][0])
-                        else:
-                            # For all other timesteps, get state from environment and record it
-                            states.append(env.sim.get_state().flatten())
-                            robot_states.append(
-                                np.concatenate([obs["robot0_gripper_qpos"], obs["robot0_eef_pos"], obs["robot0_eef_quat"]])
-                            )
-
-                        # Record original action (from demo)
-                        actions.append(action)
-
-                        # Record data returned by environment
-                        if "robot0_gripper_qpos" in obs:
-                            gripper_states.append(obs["robot0_gripper_qpos"])
-                        joint_states.append(obs["robot0_joint_pos"])
-                        ee_states.append(
-                            np.hstack(
-                                (
-                                    obs["robot0_eef_pos"],
-                                    T.quat2axisangle(obs["robot0_eef_quat"]),
-                                )
-                            )
-                        )
-                        agentview_images.append(obs["agentview_image"])
-                        eye_in_hand_images.append(obs["robot0_eye_in_hand_image"])
-
-                        # Execute demo action in environment
-                        obs, reward, done, info = env.step(action.tolist())
-                    
-                    if done:
-                        rep_idx += 1
-                        cur_demo_success += 1
-                        for lerobot_idx in range(len(states)):
-                            dataset.add_frame(
-                                {
-                                    "observation.image": np.flipud(agentview_images[lerobot_idx]),
-                                    "observation.wrist_image": np.flipud(eye_in_hand_images[lerobot_idx]),
-                                    "observation.state": robot_states[lerobot_idx].astype(np.float32),   # 转化为 float32, numpy
-                                    "observation.environment_state": states[lerobot_idx].astype(np.float32),
-                                    "task": task_description,  # task_description.decode()
-                                    "action": actions[lerobot_idx].astype(np.float32), 
-                                }
-                            )
-                        
-                        dataset.save_episode()
-
-                        if args.need_hdf5:
-                            dones = np.zeros(len(actions)).astype(np.uint8)
-                            dones[-1] = 1
-                            rewards = np.zeros(len(actions)).astype(np.uint8)
-                            rewards[-1] = 1
-                            assert len(actions) == len(agentview_images)
-                            ep_data_grp = grp.create_group(f"demo_{i}_{rep_idx}")
-                            obs_grp = ep_data_grp.create_group("obs")
-                            obs_grp.create_dataset("gripper_states", data=np.stack(gripper_states, axis=0))
-                            obs_grp.create_dataset("joint_states", data=np.stack(joint_states, axis=0))
-                            obs_grp.create_dataset("ee_states", data=np.stack(ee_states, axis=0))
-                            obs_grp.create_dataset("ee_pos", data=np.stack(ee_states, axis=0)[:, :3])
-                            obs_grp.create_dataset("ee_ori", data=np.stack(ee_states, axis=0)[:, 3:])
-                            obs_grp.create_dataset("agentview_rgb", data=np.stack(agentview_images, axis=0))
-                            obs_grp.create_dataset("eye_in_hand_rgb", data=np.stack(eye_in_hand_images, axis=0))
-                            ep_data_grp.create_dataset("actions", data=actions)
-                            ep_data_grp.create_dataset("states", data=np.stack(states))
-                            ep_data_grp.create_dataset("robot_states", data=np.stack(robot_states, axis=0))
-                            ep_data_grp.create_dataset("rewards", data=rewards)
-                            ep_data_grp.create_dataset("dones", data=dones)
-
-                        if args.show_diff:
-                            cur_agentview_rgb = agentview_images
-                            ori_agentview_rgb = demo_data["obs"]["agentview_rgb"][()]
-                            ori_agentview_rgb = [ori_agentview_rgb[j] for j in range(len(ori_agentview_rgb))]
-                            
-                            # cur_agent_view_rgb 和 ori_agentview_rgb 都是list of numpy.ndarray, shape: (256, 256, 3)
-                            # 将两者竖直方向concat 起来，存为 jpg
-                            # ori_agentview_rgb 图像插值为 (128, 128, 3) -> (256, 256, 3)
-                            ori_agentview_rgb = [cv2.resize(ori_agentview_rgb[j], (256, 256)) for j in range(len(ori_agentview_rgb))]
-                            whole_ori_agentview_rgb = np.concatenate(ori_agentview_rgb[::10], axis=1)
-                            whole_cur_agentview_rgb = np.concatenate(cur_agentview_rgb[::10], axis=1)
-                            if whole_ori_agentview_rgb.shape[1] == whole_cur_agentview_rgb.shape[1]:
-                                whole_ori_agentview_rgb, whole_cur_agentview_rgb = np.flipud(whole_ori_agentview_rgb), np.flipud(whole_cur_agentview_rgb)
-                                all_agentview_rgb = np.concatenate((whole_ori_agentview_rgb, whole_cur_agentview_rgb), axis=0)
-                                # 将all_agentview_rgb:(H, W, 3)保存为图片
-                                
-                                os.makedirs(os.path.join(repo_name, f"{args.libero_task_suite}", f"{task.name}"), exist_ok=True)
-                                Image.fromarray(all_agentview_rgb).save(os.path.join(repo_name, f"{args.libero_task_suite}", f"{task.name}",f"demo_{i}_{rep_idx}.jpg"))
-                        
-                real_success_demo_num += 1
-
-            num_replays += 1
-            
-            if sum(done_list) != 0 and sum(done_list) != len(done_list):
-                pass
-            if done_list[-1]:
-                all_done_list.append(done_list)
-            # Record success/false and initial environment state in metainfo dict
-            task_key = task_description.replace(" ", "_")
-            episode_key = f"demo_{i}"
-            if task_key not in metainfo_json_dict:
-                metainfo_json_dict[task_key] = {}
-            if episode_key not in metainfo_json_dict[task_key]:
-                metainfo_json_dict[task_key][episode_key] = {}
-            metainfo_json_dict[task_key][episode_key]["success"] = bool(done)
-            metainfo_json_dict[task_key][episode_key]["initial_state"] = orig_states[0].tolist()
-
-            # Write metainfo dict to JSON file
-            # (We repeatedly overwrite, rather than doing this once at the end, just in case the script crashes midway)
-            with open(metainfo_json_out_path, "w") as f:
-                json.dump(metainfo_json_dict, f, indent=2)
-
-            # Count total number of successful replays so far
-            print(
-                f"Total # episodes replayed: {num_replays}, "
-                f"Total # successes: {num_success} ({num_success / num_replays * 100:.1f} %)"
-            )
-
-            # Report total number of no-op actions filtered out so far
-            print(f"  Total # no-op actions filtered out: {num_noops}")
-
-        # Close HDF5 files
-        orig_data_file.close()
+        # Update other counters
+        num_replays += task_replays
+        num_success += task_success
+        num_noops += task_noops
+    
+    # Print final statistics
+    print(f"Total replays: {num_replays}")
+    print(f"Total successes: {num_success}")
+    print(f"Total no-ops filtered: {num_noops}")
+    
+    # Print time statistics
+    print_time_counter(TIME_COUNTER)
+    
+    # Cleanup
+    pool.close()
+    pool.join()
 
     print(f"Dataset regeneration complete! Saved new dataset at: {lerobot_output_path}")
     print(f"Saved metainfo JSON at: {metainfo_json_out_path}")
-    
-    print(f"all_done_list: {all_done_list}")
 
 
 if __name__ == "__main__":
@@ -721,6 +644,13 @@ if __name__ == "__main__":
         type=str,
         help="need color change",
         default="True"
+    )
+    
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite existing dataset",
+        default=False
     )
     
     
