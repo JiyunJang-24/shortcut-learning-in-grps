@@ -226,50 +226,84 @@ OXE_NAMED_MIXTURES: Dict[str, List[Tuple[str, float]]] = {
         ("v-0.600-0.600_num5/libero_spatial", 1.0),   
     ],
     
+    # minivla viewpoint diversity group 1
     "minivla-spatial-split-dataset-400400-600600": [
         ("v-0.400-0.400_0,1,3,5,8/libero_spatial", 1.0),   
         ("v-0.600-0.600_2,4,6,7,9/libero_spatial", 1.0),  
     ],
-    
     "minivla-spatial-split-dataset-400500-500600": [
         ("v-0.400-0.500_0,1,3,5,8/libero_spatial", 1.0),   
         ("v-0.500-0.600_2,4,6,7,9/libero_spatial", 1.0),  
     ],
-    
     "minivla-spatial-split-dataset-400550-450600": [
         ("v-0.400-0.550_0,1,3,5,8/libero_spatial", 1.0),   
         ("v-0.450-0.600_2,4,6,7,9/libero_spatial", 1.0),  
     ],
     
+    # minivla viewpoint diversity group 2
     "minivla-spatial-split-dataset-200200-800800": [
         ("v-0.200-0.200_0,1,3,5,8/libero_spatial", 1.0),   
         ("v-0.800-0.800_2,4,6,7,9/libero_spatial", 1.0),  
     ],
-    
     "minivla-spatial-split-dataset-200350-650800": [
         ("v-0.200-0.350_0,1,3,5,8/libero_spatial", 1.0),   
         ("v-0.650-0.800_2,4,6,7,9/libero_spatial", 1.0),  
     ],
-    
     "minivla-spatial-split-dataset-200500-500800": [
         ("v-0.200-0.500_0,1,3,5,8/libero_spatial", 1.0),   
         ("v-0.500-0.800_2,4,6,7,9/libero_spatial", 1.0),  
     ],
-    
     "minivla-spatial-split-dataset-200650-350800": [
         ("v-0.200-0.650_0,1,3,5,8/libero_spatial", 1.0),   
         ("v-0.350-0.800_2,4,6,7,9/libero_spatial", 1.0),  
     ],
     
+    # minivla viewpoint diversity group 3
     "minivla-spatial-split-dataset-300300-700700": [
         ("v-0.300-0.300_0,1,3,5,8/libero_spatial", 1.0),   
         ("v-0.700-0.700_2,4,6,7,9/libero_spatial", 1.0),  
     ],
+    "minivla-spatial-split-dataset-300450-550700": [
+        ("v-0.300-0.450_0,1,3,5,8/libero_spatial", 1.0),   
+        ("v-0.550-0.700_2,4,6,7,9/libero_spatial", 1.0),  
+    ],
+    "minivla-spatial-split-dataset-300550-450700": [
+        ("v-0.300-0.550_0,1,3,5,8/libero_spatial", 1.0),   
+        ("v-0.450-0.700_2,4,6,7,9/libero_spatial", 1.0),  
+    ],
     
-    
+    # minivla viewpoint diversity group 4
     "minivla-spatial-split-dataset-350350-650650": [
         ("v-0.350-0.350_0,1,3,5,8/libero_spatial", 1.0),   
         ("v-0.650-0.650_2,4,6,7,9/libero_spatial", 1.0),  
     ],
+    
+    # combine d diversity and c diversity into data island
+    "minivla-spatial-split-dataset-400400-600600-specify_tmp": [
+        ("v-0.400-0.400_0,1,3,5,8_specify_tmp/libero_spatial", 1.0),   
+        ("v-0.600-0.600_2,4,6,7,9_specify_tmp/libero_spatial", 1.0),  
+    ],
+    
+    # minivla viewpoint distance group 1
+    "minivla-spatial-split-dataset-050350-650950": [
+        ("v-0.050-0.350_0,1,3,5,8/libero_spatial", 1.0),   
+        ("v-0.650-0.950_2,4,6,7,9/libero_spatial", 1.0),  
+    ],
+    
+    # minivla viewpoint distance new group
+    "minivla-spatial-split-dataset-050150-850950": [
+        ("v-0.050-0.150_0,1,3,5,8/libero_spatial", 1.0),   
+        ("v-0.850-0.950_2,4,6,7,9/libero_spatial", 1.0),  
+    ],
+    "minivla-spatial-split-dataset-050200-800950": [
+        ("v-0.050-0.200_0,1,3,5,8/libero_spatial", 1.0),   
+        ("v-0.800-0.950_2,4,6,7,9/libero_spatial", 1.0),  
+    ],
+    "minivla-spatial-split-dataset-050250-750950": [
+        ("v-0.050-0.250_0,1,3,5,8/libero_spatial", 1.0),   
+        ("v-0.750-0.950_2,4,6,7,9/libero_spatial", 1.0),  
+    ],
+    
+    
 }
 # fmt: on
