@@ -23,8 +23,8 @@ else
     echo "LIBERO_PATH=${LIBERO_DATA_ROOT}"
 fi
 
-LOG_ROOT=libero_minivla_split_large_distance
-WANDB_PROJECT="libero_minivla_split_large_distance"
+LOG_ROOT=libero_minivla_split_large_distance_20_10
+WANDB_PROJECT="libero_minivla_split_large_distance_20_10"
 WANDB_ENTITY="1207481522" # should be you user name or team name in w&b account
 
 max_steps=10000

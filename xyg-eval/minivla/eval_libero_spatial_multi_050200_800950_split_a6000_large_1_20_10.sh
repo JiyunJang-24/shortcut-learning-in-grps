@@ -4,14 +4,14 @@ export HF_ENDPOINT=https://hf-mirror.com
 export CUDA_DEVICE_ORDER="PCI_BUS_ID"
 conda activate openvla-mini
 
-base_ckpt_dir=logs/2025-4-22/9-46-0_libero_minivla_split_large_distance/prism-qwen25-dinosiglip-224px+0_5b+mx-libero-90+n1+b16+x7/checkpoints
+base_ckpt_dir=logs/2025-4-23/4-41-36_libero_minivla_split_large_distance_20_10/prism-qwen25-dinosiglip-224px+0_5b+mx-libero-90+n1+b16+x7/checkpoints
 # /mnt/hdd3/xingyouguang/projects/robotics/lerobot/outputs/train/2025-03-26/21-24-06_diffusion/checkpoints/030000/pretrained_model
 # ls ${base_ckpt_dir} 写成一个 array数组
 ckpt_paths=($(ls "${base_ckpt_dir}"))
 min_weight1=0.050
-max_weight1=0.150
+max_weight1=0.200
 task1_id_arr=(0 1 3 5 8)
-min_weight2=0.850
+min_weight2=0.800
 max_weight2=0.950
 task2_id_arr=(2 4 6 7 9)
 mid_number1="$(echo "scale=3; ($min_weight1 + $max_weight2) / 2" | bc)"
@@ -20,7 +20,7 @@ sleep_time=5
 
 task1_id_arr_str=$(printf "%s," "${task1_id_arr[@]}" | sed 's/,$//')
 task2_id_arr_str=$(printf "%s," "${task2_id_arr[@]}" | sed 's/,$//')
-local_log_dir="./experiments-test/logs-50-02-${min_weight1}-${max_weight1}-${task1_id_arr_str}-${min_weight2}-${max_weight2}-${task2_id_arr_str}-large"
+local_log_dir="./experiments-test/logs-20-10-${min_weight1}-${max_weight1}-${task1_id_arr_str}-${min_weight2}-${max_weight2}-${task2_id_arr_str}-large"
 num_trials_per_task=10
 num_tasks_in_suite=1    # 测试的时候还是单个测试
 
@@ -47,8 +47,8 @@ function get_single_weight() {
         cur_weight_min=${min_weight1}
         cur_weight_max=${min_weight1}
     elif [ "${x}" == "ADIS" ]; then   # 距离测试的时候，保证公平性，都在一个点测试
-        cur_weight_min=0.150
-        cur_weight_max=0.150
+        cur_weight_min=0.200
+        cur_weight_max=0.200
     elif [ "${x}" == "B" ]; then
         cur_weight_min=${min_weight2}
         cur_weight_max=${max_weight2}
@@ -56,8 +56,8 @@ function get_single_weight() {
         cur_weight_min=${max_weight2}
         cur_weight_max=${max_weight2}
     elif [ "${x}" == "BDIS" ]; then   # 距离测试的时候，保证公平性，都在一个点测试
-        cur_weight_min=0.850
-        cur_weight_max=0.850
+        cur_weight_min=0.800
+        cur_weight_max=0.800
     elif [ "${x}" == "C" ]; then
         cur_weight_min=${mid_number1}
         cur_weight_max=${mid_number1}
@@ -104,9 +104,9 @@ for sub_dir in "${ckpt_paths[@]}"; do
     fi
 
     i=$((i+1))
-    if [[ $i -ne 4 ]] ; then 
-        continue
-    fi
+    # if [[ $i -ne 4 ]] ; then 
+    #     continue
+    # fi
 
     if [ "${sub_dir}" == "step-002500-epoch-03-loss=1.0648.pt" ]; then  # 测过了
         continue

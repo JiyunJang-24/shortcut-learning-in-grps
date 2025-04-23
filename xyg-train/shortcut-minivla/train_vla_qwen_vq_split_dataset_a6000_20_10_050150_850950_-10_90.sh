@@ -2,7 +2,7 @@
 CONDA_BASE=$(conda info --base)
 source "$CONDA_BASE/etc/profile.d/conda.sh"
 export HF_ENDPOINT=https://hf-mirror.com
-export CUDA_DEVICE_ORDER="PCI_BUS_ID"w
+export CUDA_DEVICE_ORDER="PCI_BUS_ID"
 export PRISMATIC_DATA_ROOT="${LIBERO_DATA_ROOT}"
 export MASTER_ADDR='127.0.0.1'
 export MASTER_PORT='29520'
@@ -14,7 +14,7 @@ conda activate openvla-mini
 # LIBERO_DATA_ROOT=/mnt/nfs/CMG/xiejunlin/datasets/Robotics/libero
 DATA_MIX="minivla-spatial-split-dataset-050150-850950"
 # 判断路径是否存在, LIBERO_DATA_ROOT
-LIBERO_DATA_ROOT="/mnt/hdd3/xingyouguang/datasets/robotics/libero/libero_spatial_no_noops_island_split_rlds/xyg_50_02_-10.0_90.0"
+LIBERO_DATA_ROOT="/mnt/hdd3/xingyouguang/datasets/robotics/libero/libero_spatial_no_noops_island_split_rlds/xyg_20_10_-10.0_90.0"
 if [ -e ${LIBERO_DATA_ROOT} ] ; then 
     echo "LIBERO_PATH=${LIBERO_DATA_ROOT}"
 else 
