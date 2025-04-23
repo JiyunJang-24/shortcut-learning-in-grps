@@ -48,7 +48,11 @@ else
     rlds_dir="${libero_base_save_dir}_full_rlds"
 fi
 user_name="xyg_$(echo ${number_demo_per_task} | awk '{printf "%02d\n", $1}')_$(echo ${demo_repeat_times} | awk '{printf "%02d\n", $1}')_$(echo $viewpoint_rotate_lower_bound | awk '{printf "%.1f\n", $1}')_$(echo $viewpoint_rotate_upper_bound | awk '{printf "%.1f\n", $1}')"
-viewpoint_path="v-$(echo $vmin | awk '{printf "%.3f\n", $1}')-$(echo $vmax | awk '{printf "%.3f\n", $1}')_${specify_task_id}"
+if [[ $num_tasks_in_suite -eq 1 ]]; then
+    viewpoint_path="v-$(echo $vmin | awk '{printf "%.3f\n", $1}')-$(echo $vmax | awk '{printf "%.3f\n", $1}')_num$((specify_task_id+1))"
+else
+    viewpoint_path="v-$(echo $vmin | awk '{printf "%.3f\n", $1}')-$(echo $vmax | awk '{printf "%.3f\n", $1}')_${specify_task_id}"
+fi
 
 echo "${hdf5_dir}/${user_name}/${viewpoint_path}"
 echo "${rlds_dir}/${user_name}/${viewpoint_path}"

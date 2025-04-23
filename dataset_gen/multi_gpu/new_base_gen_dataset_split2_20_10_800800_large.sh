@@ -2,25 +2,42 @@
 unset CUDA_VISIBLE_DEVICES
 CONDA_BASE=$(conda info --base)
 source "$CONDA_BASE/etc/profile.d/conda.sh"
-conda activate openvla-mini
+if [[ -d "/home/xingyouguang" ]] ; then
+    conda activate openvla-mini
+else 
+    conda activate openvla-mini.xyg
+fi
 
 CUR_PATH=$(pwd)
 
+export MUJOCO_GL="egl"
 libero_task_suite="libero_spatial"
 libero_raw_data_dir="/mnt/hdd3/xingyouguang/datasets/robotics/libero/libero_spatial"
+if [[ ! -d $libero_raw_data_dir ]]; then
+    libero_raw_data_dir="/home-ssd/Users/nsgm_lx/xingyouguang/datasets/robotics/libero/libero_spatial"
+fi
+
+if [[ ! -d $libero_raw_data_dir ]]; then
+    echo "ERROR: ${libero_raw_data_dir} not found"
+    exit
+fi
+
+echo "libero_raw_data_dir: ${libero_raw_data_dir}"
+
 libero_base_save_dir="${libero_raw_data_dir}_no_noops_island"
 
 viewpoint_rotate_lower_bound=-10.0
 viewpoint_rotate_upper_bound=90.0
-vmin=0.650
+vmin=0.800
 vmax=0.800
 num_tasks_in_suite=5
 specify_task_id=2,4,6,7,9
-number_demo_per_task=50
-demo_repeat_times=2
+number_demo_per_task=20
+demo_repeat_times=10
+number_parallel_process=1
 
 if [ 1 -eq 1 ]; then
-    python experiments/robot/libero/regenerate_libero_hdf5_lerobot_dataset_repeat_split.py \
+    python experiments/robot/libero/regenerate_libero_hdf5_lerobot_dataset_repeat_split_multi_processor.py \
         --libero_task_suite $libero_task_suite \
         --libero_raw_data_dir $libero_raw_data_dir \
         --libero_base_save_dir $libero_base_save_dir \
@@ -29,7 +46,8 @@ if [ 1 -eq 1 ]; then
         --viewpoint_rotate_upper_bound $viewpoint_rotate_upper_bound \
         --vmin $vmin --vmax $vmax --need_color_change False \
         --num_tasks_in_suite $num_tasks_in_suite --specify_task_id $specify_task_id --number_demo_per_task $number_demo_per_task \
-        --demo_repeat_times $demo_repeat_times --change_light False
+        --demo_repeat_times $demo_repeat_times --change_light False \
+        --number_parallel_process "${number_parallel_process}"
 fi
 
 cd "${CUR_PATH}/dataset_git/rlds_dataset_builder/LIBERO_Spatial_XYG"

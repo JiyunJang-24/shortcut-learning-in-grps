@@ -239,6 +239,7 @@ torchvision               0.17.0+cu121             pypi_0    pypi
 tqdm                      4.67.1                   pypi_0    pypi
 traitlets                 5.14.3                   pypi_0    pypi
 transformers              4.40.1                   pypi_0    pypi
+transforms3d              0.4.2                    pypi_0    pypi
 trimesh                   4.6.8                    pypi_0    pypi
 triton                    2.2.0                    pypi_0    pypi
 typeguard                 2.13.3                   pypi_0    pypi
