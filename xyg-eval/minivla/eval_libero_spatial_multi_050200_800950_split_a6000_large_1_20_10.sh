@@ -4,7 +4,7 @@ export HF_ENDPOINT=https://hf-mirror.com
 export CUDA_DEVICE_ORDER="PCI_BUS_ID"
 conda activate openvla-mini
 
-base_ckpt_dir=logs/2025-4-21/21-24-2_libero_minivla_split_large_distance/prism-qwen25-dinosiglip-224px+0_5b+mx-libero-90+n1+b16+x7/checkpoints
+base_ckpt_dir=logs/2025-4-23/4-41-36_libero_minivla_split_large_distance_20_10/prism-qwen25-dinosiglip-224px+0_5b+mx-libero-90+n1+b16+x7/checkpoints
 # /mnt/hdd3/xingyouguang/projects/robotics/lerobot/outputs/train/2025-03-26/21-24-06_diffusion/checkpoints/030000/pretrained_model
 # ls ${base_ckpt_dir} 写成一个 array数组
 ckpt_paths=($(ls "${base_ckpt_dir}"))
@@ -20,7 +20,7 @@ sleep_time=5
 
 task1_id_arr_str=$(printf "%s," "${task1_id_arr[@]}" | sed 's/,$//')
 task2_id_arr_str=$(printf "%s," "${task2_id_arr[@]}" | sed 's/,$//')
-local_log_dir="./experiments-test/logs-50-02-${min_weight1}-${max_weight1}-${task1_id_arr_str}-${min_weight2}-${max_weight2}-${task2_id_arr_str}-large"
+local_log_dir="./experiments-test/logs-20-10-${min_weight1}-${max_weight1}-${task1_id_arr_str}-${min_weight2}-${max_weight2}-${task2_id_arr_str}-large"
 num_trials_per_task=10
 num_tasks_in_suite=1    # 测试的时候还是单个测试
 
@@ -103,7 +103,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
         continue
     fi
 
-    # i=$((i+1))
+    i=$((i+1))
     # if [[ $i -ne 4 ]] ; then 
     #     continue
     # fi
