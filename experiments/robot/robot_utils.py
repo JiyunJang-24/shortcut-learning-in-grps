@@ -57,6 +57,8 @@ def get_model(cfg, wrap_diffusion_policy_for_droid=False):
         model = get_prismatic_vla(cfg)
     elif cfg.model_family == "openvla":
         model = get_vla(cfg)
+    elif cfg.model_family == "pi0" or cfg.model_family == "pi0_fast":
+        model = None
     else:
         raise ValueError(f"Unexpected `model_family` found in config ({cfg.model_family}).")
     print(f"Loaded model: {type(model)}")
@@ -72,6 +74,8 @@ def get_image_resize_size(cfg):
     if cfg.model_family == "prismatic":
         resize_size = 224
     elif cfg.model_family == "openvla":
+        resize_size = 224
+    elif cfg.model_family == "pi0" or cfg.model_family == "pi0_fast":
         resize_size = 224
     else:
         raise ValueError("Unexpected `model_family` found in config.")

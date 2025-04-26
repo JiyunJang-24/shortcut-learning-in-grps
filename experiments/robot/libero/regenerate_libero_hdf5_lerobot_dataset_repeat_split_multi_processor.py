@@ -674,6 +674,7 @@ def main(args):
                 "shape": (7,),
                 "names": ["action"],
             },
+            
         },
         image_writer_threads=10,
         image_writer_processes=5,
