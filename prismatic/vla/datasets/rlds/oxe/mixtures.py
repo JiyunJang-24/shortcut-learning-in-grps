@@ -304,6 +304,31 @@ OXE_NAMED_MIXTURES: Dict[str, List[Tuple[str, float]]] = {
         ("v-0.750-0.950_2,4,6,7,9/libero_spatial", 1.0),  
     ],
     
+    "minivla-spatial-split-dataset-100200-800900": [
+        ("v-0.100-0.200_0,1,3,5,8/libero_spatial", 1.0),   
+        ("v-0.800-0.900_2,4,6,7,9/libero_spatial", 1.0),  
+    ],
+    "minivla-spatial-split-dataset-150250-750850": [
+        ("v-0.150-0.250_0,1,3,5,8/libero_spatial", 1.0),   
+        ("v-0.750-0.850_2,4,6,7,9/libero_spatial", 1.0),  
+    ],
+    "minivla-spatial-split-dataset-200300-700800": [
+        ("v-0.200-0.300_0,1,3,5,8/libero_spatial", 1.0),   
+        ("v-0.700-0.800_2,4,6,7,9/libero_spatial", 1.0),  
+    ],
+    "minivla-spatial-split-dataset-250350-650750": [
+        ("v-0.250-0.350_0,1,3,5,8/libero_spatial", 1.0),   
+        ("v-0.650-0.750_2,4,6,7,9/libero_spatial", 1.0),  
+    ],
+    "minivla-spatial-split-dataset-300400-600700": [
+        ("v-0.300-0.400_0,1,3,5,8/libero_spatial", 1.0),   
+        ("v-0.600-0.700_2,4,6,7,9/libero_spatial", 1.0),  
+    ],
+    "minivla-spatial-split-dataset-350450-550650": [
+        ("v-0.350-0.450_0,1,3,5,8/libero_spatial", 1.0),   
+        ("v-0.550-0.650_2,4,6,7,9/libero_spatial", 1.0),  
+    ],
+    
     
 }
 # fmt: on
