@@ -1,4 +1,4 @@
-# packages in environment at /home/xingyouguang/data/software/miniconda3/envs/openvla-mini:
+# packages in environment at /home-ssd/Users/nsgm_lx/miniconda3/envs/openvla-mini.xyg:
 #
 # Name                    Version                   Build  Channel
 _libgcc_mutex             0.1                        main  
@@ -19,16 +19,14 @@ attrs                     25.1.0                   pypi_0    pypi
 av                        14.2.0                   pypi_0    pypi
 azure-cognitiveservices-speech 1.42.0                   pypi_0    pypi
 bddl                      1.0.1                    pypi_0    pypi
-beautifulsoup4            4.13.3                   pypi_0    pypi
-blas                      1.0                         mkl  
+beautifulsoup4            4.13.4                   pypi_0    pypi
 blinker                   1.9.0                    pypi_0    pypi
-brotli-python             1.0.9           py310h6a678d5_9  
 bzip2                     1.0.8                h5eee18b_6  
 ca-certificates           2025.2.25            h06a4308_0  
 cachetools                5.5.2                    pypi_0    pypi
 certifi                   2025.1.31          pyhd8ed1ab_0    conda-forge
 cffi                      1.17.1                   pypi_0    pypi
-charset-normalizer        3.3.2              pyhd3eb1b0_0  
+charset-normalizer        2.1.1                    pypi_0    pypi
 click                     8.1.8                    pypi_0    pypi
 cloudpickle               1.3.0                    pypi_0    pypi
 cmake                     3.31.6                   pypi_0    pypi
@@ -52,6 +50,8 @@ deepdiff                  8.4.2                    pypi_0    pypi
 diffusers                 0.32.2                   pypi_0    pypi
 dill                      0.3.8                    pypi_0    pypi
 dlimp                     0.0.1                    pypi_0    pypi
+dm-control                1.0.28                   pypi_0    pypi
+dm-env                    1.6                      pypi_0    pypi
 dm-control                1.0.28                   pypi_0    pypi
 dm-env                    1.6                      pypi_0    pypi
 dm-tree                   0.1.9                    pypi_0    pypi
@@ -81,11 +81,8 @@ gast                      0.6.0                    pypi_0    pypi
 gdown                     5.2.0                    pypi_0    pypi
 gitdb                     4.0.12                   pypi_0    pypi
 gitpython                 3.1.44                   pypi_0    pypi
-glfw                      2.8.0                    pypi_0    pypi
-gmp                       6.3.0                h6a678d5_0  
-gmpy2                     2.2.1           py310h5eee18b_0  
-gnutls                    3.6.15               he1e5248_0  
-google-auth               2.38.0                   pypi_0    pypi
+glfw                      2.9.0                    pypi_0    pypi
+google-auth               2.39.0                   pypi_0    pypi
 google-auth-oauthlib      1.2.1                    pypi_0    pypi
 google-pasta              0.2.0                    pypi_0    pypi
 grpcio                    1.71.0                   pypi_0    pypi
@@ -97,7 +94,7 @@ h5py                      3.13.0                   pypi_0    pypi
 hf-transfer               0.1.9                    pypi_0    pypi
 huggingface-hub           0.29.2                   pypi_0    pypi
 hydra-core                1.2.0                    pypi_0    pypi
-idna                      3.7             py310h06a4308_0  
+idna                      3.4                      pypi_0    pypi
 imageio                   2.37.0                   pypi_0    pypi
 imageio-ffmpeg            0.6.0                    pypi_0    pypi
 immutabledict             4.2.1                    pypi_0    pypi
@@ -129,7 +126,6 @@ labmaze                   1.0.6                    pypi_0    pypi
 lame                      3.100                h7b6447c_0  
 lcms2                     2.16                 hb9589c4_0  
 ld_impl_linux-64          2.40                 h12ee557_0  
-lerc                      4.0.0                h6a678d5_0  
 lerobot                   0.1.0                    pypi_0    pypi
 libclang                  18.1.1                   pypi_0    pypi
 libcublas                 12.1.0.26                     0    nvidia
@@ -199,6 +195,7 @@ nltk                      3.9.1                    pypi_0    pypi
 numba                     0.61.0                   pypi_0    pypi
 numcodecs                 0.13.1                   pypi_0    pypi
 numpy                     1.26.4                   pypi_0    pypi
+numpy                     1.26.4                   pypi_0    pypi
 nvidia-cublas-cu12        12.1.3.1                 pypi_0    pypi
 nvidia-cuda-cupti-cu12    12.1.105                 pypi_0    pypi
 nvidia-cuda-nvrtc-cu12    12.1.105                 pypi_0    pypi
@@ -211,11 +208,10 @@ nvidia-cusparse-cu12      12.1.0.106               pypi_0    pypi
 nvidia-cusparselt-cu12    0.6.2                    pypi_0    pypi
 nvidia-ml-py              12.570.86                pypi_0    pypi
 nvidia-nccl-cu12          2.19.3                   pypi_0    pypi
-nvidia-nvjitlink-cu12     12.4.127                 pypi_0    pypi
+nvidia-nvjitlink-cu12     12.1.105                 pypi_0    pypi
 nvidia-nvtx-cu12          12.1.105                 pypi_0    pypi
 nvitop                    1.4.2                    pypi_0    pypi
 oauthlib                  3.2.2                    pypi_0    pypi
-ocl-icd                   2.3.2                h5eee18b_1  
 omegaconf                 2.3.0                    pypi_0    pypi
 opencv-python             4.11.0.86                pypi_0    pypi
 openexr                   3.3.2                    pypi_0    pypi
@@ -275,7 +271,7 @@ quadprog                  0.1.13                   pypi_0    pypi
 readline                  8.2                  h5eee18b_0  
 referencing               0.36.2                   pypi_0    pypi
 regex                     2024.11.6                pypi_0    pypi
-requests                  2.32.3          py310h06a4308_1  
+requests                  2.32.3                   pypi_0    pypi
 requests-oauthlib         2.0.0                    pypi_0    pypi
 rerun-sdk                 0.22.1                   pypi_0    pypi
 rich                      13.9.4                   pypi_0    pypi
@@ -298,7 +294,6 @@ soupsieve                 2.6                      pypi_0    pypi
 sqlite                    3.45.3               h5eee18b_0  
 stack_data                0.6.3              pyhd8ed1ab_1    conda-forge
 sympy                     1.13.1                   pypi_0    pypi
-tbb                       2021.8.0             hdb19cb5_0  
 tensorboard               2.15.2                   pypi_0    pypi
 tensorboard-data-server   0.7.2                    pypi_0    pypi
 tensorflow                2.15.0                   pypi_0    pypi
@@ -327,6 +322,7 @@ transforms3d              0.4.2                    pypi_0    pypi
 trimesh                   4.6.4                    pypi_0    pypi
 triton                    2.2.0                    pypi_0    pypi
 typeguard                 2.13.3                   pypi_0    pypi
+typing-extensions         4.12.2                   pypi_0    pypi
 typing-inspect            0.9.0                    pypi_0    pypi
 typing_extensions         4.12.2          py310h06a4308_0  
 tzdata                    2025.1                   pypi_0    pypi
@@ -345,4 +341,3 @@ zarr                      2.18.3                   pypi_0    pypi
 zeromq                    4.3.5                h3b0a872_7    conda-forge
 zipp                      3.21.0             pyhd8ed1ab_1    conda-forge
 zlib                      1.2.13               h5eee18b_1  
-zstd                      1.5.6                hc292b87_0  

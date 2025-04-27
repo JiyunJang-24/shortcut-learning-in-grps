@@ -616,15 +616,22 @@ def main(args):
     # Run tasks in parallel
     print(f"Processing {len(task_id_list)} tasks in parallel")
     num_processes = len(task_id_list)  # One process per task
+    if args.number_parallel_process is not None:
+        num_processes = min(num_processes, args.number_parallel_process)
     
     # Use multiprocessing Pool to process tasks in parallel
-    with multiprocessing.Pool(processes=num_processes) as pool:
-        process_task_with_args = partial(process_task, args, libero_task_suite=args.libero_task_suite, shared_values=shared_values)
-        results = list(tqdm.tqdm(
-            pool.imap(process_task_with_args, task_id_list),
-            total=len(task_id_list),
-            desc="Processing tasks"
-        ))
+    if num_processes > 1:
+        with multiprocessing.Pool(processes=num_processes) as pool:
+            process_task_with_args = partial(process_task, args, libero_task_suite=args.libero_task_suite, shared_values=shared_values)
+            results = list(tqdm.tqdm(
+                pool.imap(process_task_with_args, task_id_list),
+                total=len(task_id_list),
+                desc="Processing tasks"
+            ))
+    else:
+        results = []
+        for task_id in task_id_list:
+            results.append(process_task(args, task_id, libero_task_suite=args.libero_task_suite, shared_values=shared_values))
     
     # Combine results from all processes
     combined_metainfo_json_dict = {}
@@ -889,6 +896,13 @@ if __name__ == "__main__":
         type=str,
         help="need color change",
         default="True"
+    )
+    
+    parser.add_argument(
+        "--number_parallel_process",
+        type=int,
+        help="number of parallel process",
+        default=None
     )
     
     

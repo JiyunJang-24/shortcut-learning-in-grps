@@ -1,0 +1,553 @@
+LIBERO_PATH=/home-ssd/Users/nsgm_lx/xingyouguang/datasets/robotics/libero/libero_spatial_no_noops_island_split_rlds/xyg_20_10_-10.0_90.0
+04/23 [23:15:12] INFO     | >> [*] OpenVLA Training :: Warming Up   train.py:122
+04/23 [23:15:13] INFO     | >>     |=> "Do or do not; there is no   train.py:148
+                          try."                                                 
+                 INFO     | >> [*] Loading Base VLM                 train.py:165
+                          `/home-ssd/Users/nsgm_lx/.cache/huggingfa             
+                          ce/hub/models--Stanford-ILIAD--prism-qwen             
+                          25-extra-dinosiglip-224px-0_5b/snapshots/             
+                          5cfd2cc6da00c06e0be7abf35d43ec792d8e9498`             
+                           from ID/Path                                         
+                 INFO     | >> [*] Loading from local path            load.py:61
+                          `/home-ssd/Users/nsgm_lx/.cache/huggingface           
+                          /hub/models--Stanford-ILIAD--prism-qwen25-e           
+                          xtra-dinosiglip-224px-0_5b/snapshots/5cfd2c           
+                          c6da00c06e0be7abf35d43ec792d8e9498`                   
+                 INFO     | >> [*] Found Config =>> Loading &         load.py:85
+                          Freezing                                              
+                          prism-qwen25-extra-dinosiglip-224px+0_5b              
+                          with:                                                 
+                                       Vision Backbone =>>                      
+                          dinosiglip-vit-so-224px                               
+                                       LLM Backbone    =>>                      
+                          qwen25-0_5b-extra                                     
+                                       Arch Specifier  =>>                      
+                          no-align+fused-gelu-mlp                               
+                                       Checkpoint Path =>>                      
+                          `/home-ssd/Users/nsgm_lx/.cache/huggingface           
+                          /hub/models--Stanford-ILIAD--prism-qwen25-e           
+                          xtra-dinosiglip-224px-0_5b/snapshots/5cfd2c           
+                          c6da00c06e0be7abf35d43ec792d8e9498/checkpoi           
+                          nts/step-020792-epoch-01-loss=0.5268.pt`              
+                 INFO     | >> [*] Loading Vision Backbone           load.py:100
+                          dinosiglip-vit-so-224px                               
+04/23 [23:15:16] INFO     | >> Loading pretrained weights from   _builder.py:186
+                          Hugging Face hub                                      
+                          (timm/vit_large_patch14_reg4_dinov2.lv                
+                          d142m)                                                
+                 INFO     | >>  Safe alternative available for       _hub.py:180
+                          'pytorch_model.bin' (as                               
+                          'model.safetensors'). Loading weights                 
+                          using safetensors.                                    
+                 INFO     | >> Resized position embedding: (37,  pos_embed.py:55
+                          37) to (16, 16).                                      
+04/23 [23:15:16] INFO     | >> Loading pretrained weights from   _builder.py:186
+                          Hugging Face hub                                      
+                          (timm/vit_large_patch14_reg4_dinov2.lv                
+                          d142m)                                                
+                 INFO     | >>  Safe alternative available for       _hub.py:180
+                          'pytorch_model.bin' (as                               
+                          'model.safetensors'). Loading weights                 
+                          using safetensors.                                    
+                 INFO     | >> Resized position embedding: (37,  pos_embed.py:55
+                          37) to (16, 16).                                      
+04/23 [23:15:18] INFO     | >> Loading pretrained weights from   _builder.py:186
+                          Hugging Face hub                                      
+                          (timm/vit_large_patch14_reg4_dinov2.lv                
+                          d142m)                                                
+                 INFO     | >>  Safe alternative available for       _hub.py:180
+                          'pytorch_model.bin' (as                               
+                          'model.safetensors'). Loading weights                 
+                          using safetensors.                                    
+                 INFO     | >> Resized position embedding: (37,  pos_embed.py:55
+                          37) to (16, 16).                                      
+04/23 [23:15:18] INFO     | >> Loading pretrained weights from   _builder.py:186
+                          Hugging Face hub                                      
+                          (timm/vit_large_patch14_reg4_dinov2.lv                
+                          d142m)                                                
+                 INFO     | >>  Safe alternative available for       _hub.py:180
+                          'pytorch_model.bin' (as                               
+                          'model.safetensors'). Loading weights                 
+                          using safetensors.                                    
+                 INFO     | >> Resized position embedding: (37,  pos_embed.py:55
+                          37) to (16, 16).                                      
+04/23 [23:15:21] INFO     | >> Loading pretrained weights from   _builder.py:186
+                          Hugging Face hub                                      
+                          (('timm/ViT-SO400M-14-SigLIP',                        
+                          'open_clip_pytorch_model.bin'))                       
+                 INFO     | >>  Safe alternative available for       _hub.py:180
+                          'open_clip_pytorch_model.bin' (as                     
+                          'open_clip_model.safetensors'). Loading               
+                          weights using safetensors.                            
+                 INFO     | >> [*] Loading Pretrained LLM            load.py:108
+                          qwen25-0_5b-extra via HF Transformers                 
+                 INFO     | >>     |=> Loading qwen2.5 LLM from  base_llm.py:121
+                          `Qwen/Qwen2.5-0.5B`                                   
+04/23 [23:15:21] INFO     | >> Loading pretrained weights from   _builder.py:186
+                          Hugging Face hub                                      
+                          (('timm/ViT-SO400M-14-SigLIP',                        
+                          'open_clip_pytorch_model.bin'))                       
+                 INFO     | >>  Safe alternative available for       _hub.py:180
+                          'open_clip_pytorch_model.bin' (as                     
+                          'open_clip_model.safetensors'). Loading               
+                          weights using safetensors.                            
+04/23 [23:15:22] INFO     | >>     |=> Loading qwen2.5 (Fast)    base_llm.py:156
+                          Tokenizer via the AutoTokenizer API                   
+Added 256 extra tokens.
+                 INFO     | >> [*] Loading VLM                       load.py:117
+                          prism-qwen25-extra-dinosiglip-224px+0_5b              
+                          from Checkpoint                                       
+04/23 [23:15:22] INFO     | >> Loading pretrained weights from   _builder.py:186
+                          Hugging Face hub                                      
+                          (('timm/ViT-SO400M-14-SigLIP',                        
+                          'open_clip_pytorch_model.bin'))                       
+                 INFO     | >>  Safe alternative available for       _hub.py:180
+                          'open_clip_pytorch_model.bin' (as                     
+                          'open_clip_model.safetensors'). Loading               
+                          weights using safetensors.                            
+Added 256 extra tokens.
+04/23 [23:15:23] INFO     | >> Loading pretrained weights from   _builder.py:186
+                          Hugging Face hub                                      
+                          (('timm/ViT-SO400M-14-SigLIP',                        
+                          'open_clip_pytorch_model.bin'))                       
+                 INFO     | >>  Safe alternative available for       _hub.py:180
+                          'open_clip_pytorch_model.bin' (as                     
+                          'open_clip_model.safetensors'). Loading               
+                          weights using safetensors.                            
+04/23 [23:15:23] INFO     | >> [*] Invoking                         train.py:209
+                          `VLM.freeze_backbones()` for                          
+                          `prism-qwen25-dinosiglip-224px+0_5b+mx-li             
+                          bero-90` => Stage: `vla-full-train`                   
+                 INFO     | >>     |=> [TRAINABLE] 🔥 =>>       prismatic.py:184
+                          Vision Backbone                                       
+                          `dinosiglip-vit-so-224px`                             
+                 INFO     | >>     |=> [TRAINABLE] 🔥 =>> LLM   prismatic.py:185
+                          Backbone `qwen25-0_5b-extra`                          
+                 INFO     | >>     |=> [TRAINABLE] 🔥 =>>       prismatic.py:186
+                          Projector `no-align+fused-gelu-mlp`                   
+                 INFO     | >> [*] # Parameters (in millions):      train.py:215
+                          1252.496 Total, 1252.496 Trainable                    
+                 INFO     | >> [*] Creating VLA Open-X Dataset with train.py:220
+                          Mixture                                               
+                          `minivla-spatial-split-dataset-200200-800             
+                          800`                                                  
+                 INFO     | >> [*] Loading VQ VAE for    action_tokenizer.py:132
+                          Action Tokenization from                              
+                          vq/pretrain_vq+mx-libero_90+fa                        
+                          ch-7+ng-7+nemb-128+nlatent-512                        
+                          /config.json...                                       
+Added 256 extra tokens.
+Added 256 extra tokens.
+04/23 [23:15:25] INFO     | >> [*] Found VQ VAE          action_tokenizer.py:135
+                          parameters:                                           
+                          <vqvae.vqvae.VqVae object at                          
+                          0x152a5d1a45e0>                                       
+                 INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.200-0.2                    
+                          00_0,1,3,5,8/libero_spatial/1.0.0                     
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split all,                         
+                          from                                                  
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.200                     
+                          -0.200_0,1,3,5,8/libero_spatial/1                     
+                          .0.0                                                  
+04/23 [23:15:26] INFO     | >> [*] Loading existing dataset    data_utils.py:208
+                          statistics from                                       
+                          /home-ssd/Users/nsgm_lx/xingyouguang                  
+                          /datasets/robotics/libero/libero_spa                  
+                          tial_no_noops_island_split_rlds/xyg_                  
+                          20_10_-10.0_90.0/v-0.200-0.200_0,1,3                  
+                          ,5,8/libero_spatial/1.0.0/dataset_st                  
+                          atistics_1a3c82ca0366a3ef5dc8635744f                  
+                          7f18c4210cd457093d72dc7cb6e58da6b651                  
+                          9.json.                                               
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.200                     
+                          -0.200_0,1,3,5,8/libero_spatial/1                     
+                          .0.0                                                  
+04/23 [23:15:26] INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.200-0.2                    
+                          00_0,1,3,5,8/libero_spatial/1.0.0                     
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split all,                         
+                          from                                                  
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.200                     
+                          -0.200_0,1,3,5,8/libero_spatial/1                     
+                          .0.0                                                  
+                 INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.800-0.8                    
+                          00_2,4,6,7,9/libero_spatial/1.0.0                     
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split all,                         
+                          from                                                  
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.800                     
+                          -0.800_2,4,6,7,9/libero_spatial/1                     
+                          .0.0                                                  
+                 INFO     | >> [*] Loading existing dataset    data_utils.py:208
+                          statistics from                                       
+                          /home-ssd/Users/nsgm_lx/xingyouguang                  
+                          /datasets/robotics/libero/libero_spa                  
+                          tial_no_noops_island_split_rlds/xyg_                  
+                          20_10_-10.0_90.0/v-0.800-0.800_2,4,6                  
+                          ,7,9/libero_spatial/1.0.0/dataset_st                  
+                          atistics_5e83dc6397331c8c2e21bfae928                  
+                          088e4c60d07d40d6ff03795df38b7185931f                  
+                          f.json.                                               
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.200                     
+                          -0.200_0,1,3,5,8/libero_spatial/1                     
+                          .0.0                                                  
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.800                     
+                          -0.800_2,4,6,7,9/libero_spatial/1                     
+                          .0.0                                                  
+
+######################################################################################
+# Loading the following 2 datasets (incl. sampling weight):                         #
+# v-0.200-0.200_0,1,3,5,8/libero_spatial: ==================================0.456870 #
+# v-0.800-0.800_2,4,6,7,9/libero_spatial: ==================================0.543130 #
+######################################################################################
+
+                 INFO     | >> [*] Threads per Dataset: [1 1]     dataset.py:545
+                 INFO     | >> [*] Reads per Dataset: [1 1]       dataset.py:546
+                 INFO     | >> [*] Constructing datasets...       dataset.py:549
+                 INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.200-0.2                    
+                          00_0,1,3,5,8/libero_spatial/1.0.0                     
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.200                     
+                          -0.200_0,1,3,5,8/libero_spatial/1                     
+                          .0.0                                                  
+04/23 [23:15:27] INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.800-0.8                    
+                          00_2,4,6,7,9/libero_spatial/1.0.0                     
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split all,                         
+                          from                                                  
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.800                     
+                          -0.800_2,4,6,7,9/libero_spatial/1                     
+                          .0.0                                                  
+04/23 [23:15:27] INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.200-0.2                    
+                          00_0,1,3,5,8/libero_spatial/1.0.0                     
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.800                     
+                          -0.800_2,4,6,7,9/libero_spatial/1                     
+                          .0.0                                                  
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split all,                         
+                          from                                                  
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.200                     
+                          -0.200_0,1,3,5,8/libero_spatial/1                     
+                          .0.0                                                  
+
+######################################################################################
+# Loading the following 2 datasets (incl. sampling weight):                         #
+# v-0.200-0.200_0,1,3,5,8/libero_spatial: ==================================0.456870 #
+# v-0.800-0.800_2,4,6,7,9/libero_spatial: ==================================0.543130 #
+######################################################################################
+
+                 INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.200-0.2                    
+                          00_0,1,3,5,8/libero_spatial/1.0.0                     
+04/23 [23:15:27] INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.800-0.8                    
+                          00_2,4,6,7,9/libero_spatial/1.0.0                     
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.200                     
+                          -0.200_0,1,3,5,8/libero_spatial/1                     
+                          .0.0                                                  
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.800                     
+                          -0.800_2,4,6,7,9/libero_spatial/1                     
+                          .0.0                                                  
+04/23 [23:15:27] INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.200-0.2                    
+                          00_0,1,3,5,8/libero_spatial/1.0.0                     
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split all,                         
+                          from                                                  
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.200                     
+                          -0.200_0,1,3,5,8/libero_spatial/1                     
+                          .0.0                                                  
+                 INFO     | >> [*] Applying frame transforms on   dataset.py:589
+                          dataset...                                            
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.200                     
+                          -0.200_0,1,3,5,8/libero_spatial/1                     
+                          .0.0                                                  
+                 INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.800-0.8                    
+                          00_2,4,6,7,9/libero_spatial/1.0.0                     
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.800                     
+                          -0.800_2,4,6,7,9/libero_spatial/1                     
+                          .0.0                                                  
+04/23 [23:15:28] INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.200                     
+                          -0.200_0,1,3,5,8/libero_spatial/1                     
+                          .0.0                                                  
+04/23 [23:15:28] INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.800-0.8                    
+                          00_2,4,6,7,9/libero_spatial/1.0.0                     
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split all,                         
+                          from                                                  
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.800                     
+                          -0.800_2,4,6,7,9/libero_spatial/1                     
+                          .0.0                                                  
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.800                     
+                          -0.800_2,4,6,7,9/libero_spatial/1                     
+                          .0.0                                                  
+04/23 [23:15:28] INFO     | >> [*] Saved dataset statistics    data_utils.py:293
+                          file at path                                          
+                          logs/2025-4-23/23-15-13_libero_miniv                  
+                          la_split_large_distance_20_10/prism-                  
+                          qwen25-dinosiglip-224px+0_5b+mx-libe                  
+                          ro-90+n0+b32+x7/dataset_statistics.j                  
+                          son                                                   
+                 INFO     | >> [*] Initializing Train Strategy      train.py:240
+                          `fsdp-full-shard`                                     
+
+######################################################################################
+# Loading the following 2 datasets (incl. sampling weight):                         #
+# v-0.200-0.200_0,1,3,5,8/libero_spatial: ==================================0.456870 #
+# v-0.800-0.800_2,4,6,7,9/libero_spatial: ==================================0.543130 #
+######################################################################################
+
+                 INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.200-0.2                    
+                          00_0,1,3,5,8/libero_spatial/1.0.0                     
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.200                     
+                          -0.200_0,1,3,5,8/libero_spatial/1                     
+                          .0.0                                                  
+                 INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.800-0.8                    
+                          00_2,4,6,7,9/libero_spatial/1.0.0                     
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split all,                         
+                          from                                                  
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.800                     
+                          -0.800_2,4,6,7,9/libero_spatial/1                     
+                          .0.0                                                  
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.800                     
+                          -0.800_2,4,6,7,9/libero_spatial/1                     
+                          .0.0                                                  
+
+######################################################################################
+# Loading the following 2 datasets (incl. sampling weight):                         #
+# v-0.200-0.200_0,1,3,5,8/libero_spatial: ==================================0.456870 #
+# v-0.800-0.800_2,4,6,7,9/libero_spatial: ==================================0.543130 #
+######################################################################################
+
+                 INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.200-0.2                    
+                          00_0,1,3,5,8/libero_spatial/1.0.0                     
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.200                     
+                          -0.200_0,1,3,5,8/libero_spatial/1                     
+                          .0.0                                                  
+                 INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.800-0.8                    
+                          00_2,4,6,7,9/libero_spatial/1.0.0                     
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.800                     
+                          -0.800_2,4,6,7,9/libero_spatial/1                     
+                          .0.0                                                  
+04/23 [23:15:29] INFO     | >> Load dataset info from        dataset_info.py:599
+                          /home-ssd/Users/nsgm_lx/xingyougua                    
+                          ng/datasets/robotics/libero/libero                    
+                          _spatial_no_noops_island_split_rld                    
+                          s/xyg_20_10_-10.0_90.0/v-0.800-0.8                    
+                          00_2,4,6,7,9/libero_spatial/1.0.0                     
+                 INFO     | >> Constructing tf.data.Dataset logging_logger.py:49
+                          libero_spatial for split                              
+                          train[:95%], from                                     
+                          /home-ssd/Users/nsgm_lx/xingyougu                     
+                          ang/datasets/robotics/libero/libe                     
+                          ro_spatial_no_noops_island_split_                     
+                          rlds/xyg_20_10_-10.0_90.0/v-0.800                     
+                          -0.800_2,4,6,7,9/libero_spatial/1                     
+                          .0.0                                                  
+04/23 [23:15:31] INFO     | >> [*] FSDP Full-Shard Strategy =>>      fsdp.py:251
+                          Finalized Training Setup:                             
+                                   |-> Global (Effective) Batch Size            
+                          = 128                                                 
+                                   |-> Per-Device Batch Size = 32               
+                                   |-> Distributed World Size = 4               
+                                   |-> Gradient Accumulation Steps =            
+                          1                                                     
+                                                                                
+                                   |-> LLM Backbone FSDP Gradient               
+                          Checkpointing = True                                  
+                                   |-> Use FSDP Mixed Precision =               
+                          True                                                  
+                                           |-> Parameter Precision =            
+                          torch.bfloat16                                        
+                                           |-> Reduction Precision =            
+                          torch.float32                                         
+                                           |-> Buffer Precision =               
+                          torch.float32                                         
+                                                                                
+                                   |-> Default AdamW LR = 2e-05                 
+                                   |-> AdamW Weight Decay = 0.0                 
+                                   |-> LR Scheduler Type = constant             
+                                   |-> LR Scheduler Warmup Steps                
+                          (Ratio) = 0 (0.0)                                     
+                                   |-> Dataset Size = 245760                    
+                          Examples                                              
+                                   |-> Max Steps = 10000                        
+                                                                                
+                 INFO     | >> [*] Creating Metrics with Active     train.py:264
+                          Trackers => `('jsonl', 'wandb')`                      
+04/23 [23:15:32] INFO     | >> [*] Starting VLA Training Loop       train.py:277
+04/24 [01:58:58] INFO     | >> [*] Done with Training =>>           train.py:287
+                          Finalizing Metrics                                    
+04/24 [02:02:29] INFO     | >> [*] ... and that's all, folks!       train.py:291
