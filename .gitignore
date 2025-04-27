@@ -165,6 +165,7 @@ experiments-cd/
 experiments-dp/
 experiments-test/
 experiments-mini/
+experiments-pi0/
 v-0.*_num*/
 data_create_v_back/
 data_create_v_back2/

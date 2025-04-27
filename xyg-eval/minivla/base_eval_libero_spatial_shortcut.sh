@@ -13,7 +13,12 @@ CONDA_BASE=$(conda info --base)
 source "$CONDA_BASE/etc/profile.d/conda.sh"
 export HF_ENDPOINT=https://hf-mirror.com
 export CUDA_DEVICE_ORDER="PCI_BUS_ID"
-conda activate openvla-mini
+
+if [[ -d '/mnt/hdd3/xingyouguang' ]] || [[ -d '/mnt/hdd2/xingyouguang' ]] ; then
+    conda activate openvla-mini
+else
+    conda activate openvla-mini.xyg
+fi
 
 # 基础默认参数值
 task1_id_arr=(0 1 3 5 8)
