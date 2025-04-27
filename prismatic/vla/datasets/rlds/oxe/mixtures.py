@@ -278,6 +278,11 @@ OXE_NAMED_MIXTURES: Dict[str, List[Tuple[str, float]]] = {
         ("v-0.650-0.650_2,4,6,7,9/libero_spatial", 1.0),  
     ],
     
+    "minivla-spatial-split-dataset-400400-600600": [
+        ("v-0.400-0.400_0,1,3,5,8/libero_spatial", 1.0),   
+        ("v-0.600-0.600_2,4,6,7,9/libero_spatial", 1.0),  
+    ],
+    
     # combine d diversity and c diversity into data island
     "minivla-spatial-split-dataset-400400-600600-specify_tmp": [
         ("v-0.400-0.400_0,1,3,5,8_specify_tmp/libero_spatial", 1.0),   
