@@ -75,7 +75,7 @@ def get_image_resize_size(cfg):
         resize_size = 224
     elif cfg.model_family == "openvla":
         resize_size = 224
-    elif cfg.model_family == "pi0" or cfg.model_family == "pi0_fast":
+    elif cfg.model_family in ["pi0", "pi0_fast"]:
         resize_size = 224
     else:
         raise ValueError("Unexpected `model_family` found in config.")

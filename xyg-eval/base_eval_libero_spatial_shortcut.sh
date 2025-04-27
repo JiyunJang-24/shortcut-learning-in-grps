@@ -1,11 +1,20 @@
 #!/bin/bash
 
 : << 'TAG'
-bash xyg-eval/minivla/base_eval_libero_spatial_a6000.sh \
+bash xyg-eval/base_eval_libero_spatial_shortcut.sh \
     --task1_id_arr="0 1 3 5 8" --task2_id_arr="2 4 6 7 9" \
     --min_weight1=0.050 --max_weight1=0.150 --min_weight2=0.850 --max_weight2=0.950 \
+    --model_family="prismatic" --base_log_dir=experiments-test  \
     --base_ckpt_dir=logs/2025-4-25/0-6-14_libero_minivla_split_large_distance_20_10/prism-qwen25-dinosiglip-224px+0_5b+mx-libero-90+n1+b16+x7 \
     --log_prefix=20-10 --eval_interval=2 --need_diversity=false --need_distance=true --ADIS_num=0.150 --BDIS_num=0.850 --need_mid_wait=false
+
+bash xyg-eval/base_eval_libero_spatial_shortcut.sh \
+    --task1_id_arr="0 1 3 5 8" --task2_id_arr="2 4 6 7 9" \
+    --min_weight1=0.050 --max_weight1=0.150 --min_weight2=0.850 --max_weight2=0.950 \
+    --model_family=pi0 --base_log_dir=experiments-pi0 \
+    --base_ckpt_dir=None \
+    --log_prefix=20-10 --eval_interval=2 --need_diversity=false --need_distance=true --ADIS_num=0.150 --BDIS_num=0.850 --need_mid_wait=true \
+    --server_port=8000
 TAG
 
 
@@ -16,9 +25,12 @@ export CUDA_DEVICE_ORDER="PCI_BUS_ID"
 
 if [[ -d '/mnt/hdd3/xingyouguang' ]] || [[ -d '/mnt/hdd2/xingyouguang' ]] ; then
     conda activate openvla-mini
+    echo "conda activate openvla-mini"
 else
     conda activate openvla-mini.xyg
+    echo "conda activate openvla-mini.xyg"
 fi
+
 
 # 基础默认参数值
 task1_id_arr=(0 1 3 5 8)
@@ -32,16 +44,18 @@ max_weight2=0.950
 
 num_trials_per_task=10
 
+model_family="prismatic"
 base_ckpt_dir=logs/2025-4-22/23-20-52_libero_minivla_split_large_distance_20_10/prism-qwen25-dinosiglip-224px+0_5b+mx-libero-90+n1+b16+x7
 sleep_time=15
 log_prefix=20-10
+base_log_dir=experiments-test
 eval_interval=1
 need_diversity="true"
 need_distance="false"
 ADIS_num=0.150
 BDIS_num=0.850
 need_mid_wait=false
-
+server_port=8000
 # 解析命名参数
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -85,6 +99,10 @@ while [[ $# -gt 0 ]]; do
       num_trials_per_task="${1#*=}"
       shift
       ;;
+    --model_family=*)
+      model_family="${1#*=}"
+      shift
+      ;;
     --base_ckpt_dir=*)
       base_ckpt_dir="${1#*=}"
       shift
@@ -95,6 +113,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --log_prefix=*)
       log_prefix="${1#*=}"
+      shift
+      ;;
+    --base_log_dir=*)
+      base_log_dir="${1#*=}"
       shift
       ;;
     --eval_interval=*)
@@ -121,6 +143,10 @@ while [[ $# -gt 0 ]]; do
       need_mid_wait="${1#*=}"
       shift
       ;;
+    --server_port=*)
+      server_port="${1#*=}"
+      shift
+      ;;
     --help)
       echo "用法: $0 [选项]"
       echo "选项:"
@@ -133,14 +159,17 @@ while [[ $# -gt 0 ]]; do
       echo "  --min_weight2=<数值>                      最小权重2，默认值: 0.850"
       echo "  --max_weight2=<数值>                      最大权重2，默认值: 0.950"
       echo "  --num_trials_per_task=<数值>              每个任务的试验次数，默认值: 10"
+      echo "  --model_family=<字符串>                   模型类型，默认值: prismatic, 可选值 diffusion, prismatic, pi0, pi0_fast"
       echo "  --base_ckpt_dir=<路径>                    检查点目录路径"
       echo "  --sleep_time=<数值>                       睡眠时间，默认值: 15"
       echo "  --log_prefix=<字符串>                     日志前缀，默认值: 20-10"
+      echo "  --base_log_dir=<路径>                     日志目录路径，默认值: experiments-test"
       echo "  --need_diversity=<布尔值>                 是否需要多样性，默认值: true"
       echo "  --need_distance=<布尔值>                  是否需要距离，默认值: false"
       echo "  --ADIS_num=<数值>                         ADIS数值，默认值: 0.150"
       echo "  --BDIS_num=<数值>                         BDIS数值，默认值: 0.850"
       echo "  --need_mid_wait=<布尔值>                  多进程是否需要在AA,BB后wait一下，默认值: false"
+      echo "  --server_port=<数值>                      服务器端口，默认值: 8000"
       echo "  --help                                    显示此帮助信息"
       exit 0
       ;;
@@ -151,12 +180,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ "${model_family}" == "pi0" ]] || [[ "${model_family}" == "pi0_fast" ]]; then
+    export MEMORY_SIZE=small
+fi
+
 mid_number1="$(echo "scale=3; ($min_weight1 + $max_weight2) / 2" | bc)"
 mid_number2="${mid_number1}"
 # /mnt/hdd3/xingyouguang/projects/robotics/lerobot/outputs/train/2025-03-26/21-24-06_diffusion/checkpoints/030000/pretrained_model
 # ls ${base_ckpt_dir} 写成一个 array数组
-base_ckpt_dir="${base_ckpt_dir}/checkpoints"
-ckpt_paths=($(ls "${base_ckpt_dir}"))
+
+if [[ "${model_family}" == "pi0" ]] || [[ "${model_family}" == "pi0_fast" ]]; then
+    ckpt_paths=("${base_ckpt_dir}")
+else
+    base_ckpt_dir="${base_ckpt_dir}/checkpoints"
+    ckpt_paths=($(ls "${base_ckpt_dir}"))
+fi
 
 task1_id_arr_str=$(printf "%s," "${task1_id_arr[@]}" | sed 's/,$//')
 task2_id_arr_str=$(printf "%s," "${task2_id_arr[@]}" | sed 's/,$//')
@@ -168,7 +206,7 @@ if [[ ${need_distance} == "true" ]] ; then
     log_prefix="${log_prefix}-dis-(${ADIS_num}-${BDIS_num})"
 fi
 
-local_log_dir="./experiments-test/logs-${log_prefix}-${min_weight1}-${max_weight1}-${task1_id_arr_str}-${min_weight2}-${max_weight2}-${task2_id_arr_str}-large"
+local_log_dir="./${base_log_dir}/logs-${log_prefix}-${min_weight1}-${max_weight1}-${task1_id_arr_str}-${min_weight2}-${max_weight2}-${task2_id_arr_str}-large"
 
 num_tasks_in_suite=1    # 测试的时候还是单个测试
 
@@ -176,7 +214,6 @@ delta_shift=0.01
 
 need_inner_interpolate=true
 need_10000_multi_ckpt=false
-model_family="prismatic"
 
 echo "$min_weight1 $max_weight1 $task1_id_arr_str $min_weight2 $max_weight2 $task2_id_arr_str, mid_number1: $mid_number1, mid_number2: $mid_number2"
 
@@ -303,6 +340,7 @@ function get_single_weight() {
     echo "${cur_weight_min} ${cur_weight_max}"
 }
 
+
 i=0
 for sub_dir in "${ckpt_paths[@]}"; do
 
@@ -313,7 +351,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
     fi
 
     i=$((i+1))
-    if [[ $(("${i}"%"${eval_interval}")) -ne 0 ]] ; then 
+    if [[ $(("${i}"%"${eval_interval}")) -ne 0 ]] && [[ "${model_family}" != "pi0" ]] && [[ "${model_family}" != "pi0_fast" ]]; then 
         continue
     fi
 
@@ -334,7 +372,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
 
     # AA
     for a_task_id in "${task1_id_arr[@]}" ; do
-        python experiments/robot/libero/run_libero_eval_dp_minivla.py \
+        python experiments/robot/libero/run_libero_eval_dp_minivla_pi0.py \
             --model_family "${model_family}" \
             --pretrained_checkpoint "${ckpt_path}" \
             --task_suite_name=libero_spatial \
@@ -349,14 +387,15 @@ for sub_dir in "${ckpt_paths[@]}"; do
             --need_color_change False \
             --specific_task_id ${a_task_id} \
             --local_log_dir "${local_log_dir}" \
+            --server_port ${server_port} \
             --seed 7 &
         
         sleep "${sleep_time}"
     done
-
+    
     # BB
     for b_task_id in "${task2_id_arr[@]}" ; do
-        python experiments/robot/libero/run_libero_eval_dp_minivla.py \
+        python experiments/robot/libero/run_libero_eval_dp_minivla_pi0.py \
             --model_family "${model_family}" \
             --pretrained_checkpoint "${ckpt_path}" \
             --task_suite_name=libero_spatial \
@@ -371,6 +410,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
             --need_color_change False \
             --specific_task_id ${b_task_id} \
             --local_log_dir "${local_log_dir}" \
+            --server_port ${server_port} \
             --seed 7 &
 
         sleep "${sleep_time}"
@@ -388,7 +428,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
             viewpoint="AL"
             read cur_viewpoint_weight_min cur_viewpoint_weight_max <<< "$(get_single_weight ${viewpoint})"
             for b_task_id in "${task2_id_arr[@]}" ; do
-                python experiments/robot/libero/run_libero_eval_dp_minivla.py \
+                python experiments/robot/libero/run_libero_eval_dp_minivla_pi0.py \
                     --model_family "${model_family}" \
                     --pretrained_checkpoint "${ckpt_path}" \
                     --task_suite_name=libero_spatial \
@@ -403,6 +443,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
                     --need_color_change False \
                     --specific_task_id ${b_task_id} \
                     --local_log_dir "${local_log_dir}" \
+                    --server_port ${server_port} \
                     --seed 7 &
 
                 sleep "${sleep_time}"
@@ -412,7 +453,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
             viewpoint="BR"
             read cur_viewpoint_weight_min cur_viewpoint_weight_max <<< "$(get_single_weight ${viewpoint})"
             for a_task_id in "${task1_id_arr[@]}" ; do
-                python experiments/robot/libero/run_libero_eval_dp_minivla.py \
+                python experiments/robot/libero/run_libero_eval_dp_minivla_pi0.py \
                     --model_family "${model_family}" \
                     --pretrained_checkpoint "${ckpt_path}" \
                     --task_suite_name=libero_spatial \
@@ -427,6 +468,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
                     --need_color_change False \
                     --specific_task_id ${a_task_id} \
                     --local_log_dir "${local_log_dir}" \
+                    --server_port ${server_port} \
                     --seed 7 &
                 sleep "${sleep_time}"
             done
@@ -437,7 +479,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
             viewpoint="ADIS"
             read cur_viewpoint_weight_min cur_viewpoint_weight_max <<< "$(get_single_weight ${viewpoint})"
             for b_task_id in "${task2_id_arr[@]}" ; do
-                python experiments/robot/libero/run_libero_eval_dp_minivla.py \
+                python experiments/robot/libero/run_libero_eval_dp_minivla_pi0.py \
                     --model_family "${model_family}" \
                     --pretrained_checkpoint "${ckpt_path}" \
                     --task_suite_name=libero_spatial \
@@ -452,6 +494,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
                     --need_color_change False \
                     --specific_task_id ${b_task_id} \
                     --local_log_dir "${local_log_dir}" \
+                    --server_port ${server_port} \
                     --seed 7 &
 
                 sleep "${sleep_time}"
@@ -461,7 +504,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
             viewpoint="BDIS"
             read cur_viewpoint_weight_min cur_viewpoint_weight_max <<< "$(get_single_weight ${viewpoint})"
             for a_task_id in "${task1_id_arr[@]}" ; do
-                python experiments/robot/libero/run_libero_eval_dp_minivla.py \
+                python experiments/robot/libero/run_libero_eval_dp_minivla_pi0.py \
                     --model_family "${model_family}" \
                     --pretrained_checkpoint "${ckpt_path}" \
                     --task_suite_name=libero_spatial \
@@ -476,6 +519,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
                     --need_color_change False \
                     --specific_task_id ${a_task_id} \
                     --local_log_dir "${local_log_dir}" \
+                    --server_port ${server_port} \
                     --seed 7 &
                 sleep "${sleep_time}"
             done
