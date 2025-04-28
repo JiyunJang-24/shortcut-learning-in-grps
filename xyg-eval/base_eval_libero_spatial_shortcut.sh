@@ -415,7 +415,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
             --specific_task_id ${a_task_id} \
             --local_log_dir "${local_log_dir}" \
             --server_port ${server_port} \
-            --seed 7 &
+            --seed 7
         
         sleep "${sleep_time}"
     done

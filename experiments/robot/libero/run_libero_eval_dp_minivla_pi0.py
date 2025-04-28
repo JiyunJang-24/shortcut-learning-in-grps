@@ -518,11 +518,6 @@ def eval_libero(cfg: GenerateConfig) -> None:
                             action_plan.extend(action_chunk[: cfg.replan_steps])
                         action = action_plan.popleft()
                         obs, reward, done, info = env.step(action.tolist())
-                        if done:
-                                task_successes += 1
-                                total_successes += 1
-                                break
-                        t += 1
                         
                     else:
                         raise ValueError("123, 123")
