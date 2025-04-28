@@ -14,7 +14,7 @@ bash xyg-eval/base_eval_libero_spatial_shortcut.sh \
     --model_family=pi0 --base_log_dir=experiments-pi0 \
     --base_ckpt_dir=None \
     --log_prefix=20-10 --eval_interval=2 --need_diversity=false --need_distance=true --ADIS_num=0.150 --BDIS_num=0.850 --need_mid_wait=true \
-    --server_port=8000
+    --server_port=8000 --save_scripts_path=None
 TAG
 
 
@@ -56,6 +56,8 @@ ADIS_num=0.150
 BDIS_num=0.850
 need_mid_wait=false
 server_port=8000
+save_scripts_path=None
+
 # 解析命名参数
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -147,6 +149,10 @@ while [[ $# -gt 0 ]]; do
       server_port="${1#*=}"
       shift
       ;;
+    --save_scripts_path=*)
+      save_scripts_path="${1#*=}"
+      shift
+      ;;
     --help)
       echo "用法: $0 [选项]"
       echo "选项:"
@@ -170,6 +176,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --BDIS_num=<数值>                         BDIS数值，默认值: 0.850"
       echo "  --need_mid_wait=<布尔值>                  多进程是否需要在AA,BB后wait一下，默认值: false"
       echo "  --server_port=<数值>                      服务器端口，默认值: 8000"
+      echo "  --save_scripts_path=<路径>                有一些测试脚本，需要保存在 experiments 的save文件中，方便查看参数，默认值: None"
       echo "  --help                                    显示此帮助信息"
       exit 0
       ;;
@@ -206,7 +213,24 @@ if [[ ${need_distance} == "true" ]] ; then
     log_prefix="${log_prefix}-dis-(${ADIS_num}-${BDIS_num})"
 fi
 
-local_log_dir="./${base_log_dir}/logs-${log_prefix}-${min_weight1}-${max_weight1}-${task1_id_arr_str}-${min_weight2}-${max_weight2}-${task2_id_arr_str}-large"
+if [[ "${viewpoint_rotate_lower_bound}" == "-10.0" ]] && [[ "${viewpoint_rotate_upper_bound}" == "90.0" ]]; then
+    local_log_dir="./${base_log_dir}/logs-${log_prefix}-${min_weight1}-${max_weight1}-${task1_id_arr_str}-${min_weight2}-${max_weight2}-${task2_id_arr_str}-large"
+elif [[ "${viewpoint_rotate_lower_bound}" == "15.0" ]] && [[ "${viewpoint_rotate_upper_bound}" == "65.0" ]]; then
+    local_log_dir="./${base_log_dir}/logs-${log_prefix}-${min_weight1}-${max_weight1}-${task1_id_arr_str}-${min_weight2}-${max_weight2}-${task2_id_arr_str}"
+else
+    echo "Error: invalid viewpoint_rotate_lower_bound: ${viewpoint_rotate_lower_bound}, viewpoint_rotate_upper_bound: ${viewpoint_rotate_upper_bound}"
+    exit 0
+fi
+
+if [[ "${save_scripts_path}" != "None" ]]; then
+    if [[ -f "${save_scripts_path}" ]]; then
+        cp ${save_scripts_path} ${local_log_dir}
+    else
+        echo "Error: save_scripts_path: ${save_scripts_path} not found"
+        exit 1
+    fi
+fi
+
 
 num_tasks_in_suite=1    # 测试的时候还是单个测试
 
@@ -220,6 +244,8 @@ echo "$min_weight1 $max_weight1 $task1_id_arr_str $min_weight2 $max_weight2 $tas
 
 
 echo "========== 脚本参数调试信息 =========="
+echo "  save_scripts_path: ${save_scripts_path}"
+
 echo "任务ID数组:"
 echo "  task1_id_arr: ${task1_id_arr[@]}"
 echo "  task2_id_arr: ${task2_id_arr[@]}"
