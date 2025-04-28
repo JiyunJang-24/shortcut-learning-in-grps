@@ -154,7 +154,7 @@ wandb/
 
 
 # xyg add
-vq/
+vq
 datasets_vis/
 logs/
 visualize-v-0.25-0.25-c-0.25-0.25/
