@@ -224,7 +224,7 @@ fi
 
 if [[ "${save_scripts_path}" != "None" ]]; then
     if [[ -f "${save_scripts_path}" ]]; then
-        mkdir ${local_log_dir}
+        mkdir -p ${local_log_dir}
         cp ${save_scripts_path} ${local_log_dir}
     else
         echo "Error: save_scripts_path: ${save_scripts_path} not found"
