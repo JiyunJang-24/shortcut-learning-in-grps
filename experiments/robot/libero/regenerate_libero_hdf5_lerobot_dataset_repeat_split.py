@@ -194,7 +194,6 @@ def main(args):
     lerobot_output_path = libero_home / repo_name
     
     hdf5_output_path = str(lerobot_output_path).replace("_lerobot/", "_hdf5/")
-    os.makedirs(hdf5_output_path, exist_ok=False)
     
     if lerobot_output_path.exists():
         print(f"Removing existing dataset at {lerobot_output_path}")
