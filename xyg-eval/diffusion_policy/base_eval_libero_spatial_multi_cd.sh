@@ -20,7 +20,7 @@ model_family="diffusion"
 
 num_trials_per_task=25
 num_tasks_in_suite=1
-local_log_dir="./experiments-dp/logs-${min_weight1}-${max_weight1}-${task1_id}-${min_weight2}-${max_weight2}-${task2_id}"
+local_log_dir="./experiments-dp-test/logs-${min_weight1}-${max_weight1}-${task1_id}-${min_weight2}-${max_weight2}-${task2_id}"
 
 # the others
 mid_number1="$(echo "scale=3; ($min_weight1 + $max_weight2) / 2" | bc)"
@@ -127,6 +127,51 @@ for sub_dir in "${ckpt_paths[@]}"; do
         # for seed in 8 9 ; do
         for seed in 7 ; do
             mkdir -p "${local_log_dir}/${seed}"
+
+            viewpoint="A"
+            task="A"
+            read cur_viewpoint_weight_min cur_viewpoint_weight_max cur_task_id <<< "$(get_cur_weight_and_task_id ${viewpoint} ${task})"
+            python experiments/robot/libero/run_libero_eval_dp_minivla.py \
+                --model_family "${model_family}" \
+                --pretrained_checkpoint "${ckpt_path}" \
+                --task_suite_name=libero_spatial \
+                --prefix="libero_spatial_task_multi_${sub_dir}_${viewpoint}_${task}" \
+                --num_trials_per_task ${num_trials_per_task} \
+                --num_tasks_in_suite ${num_tasks_in_suite} \
+                --use_wandb false \
+                --viewpoint_rotate_upper_bound ${viewpoint_rotate_upper_bound} \
+                --viewpoint_rotate_lower_bound ${viewpoint_rotate_lower_bound} \
+                --viewpoint_rotate_min_interpolate_weight ${cur_viewpoint_weight_min} \
+                --viewpoint_rotate_max_interpolate_weight ${cur_viewpoint_weight_max} \
+                --need_color_change False \
+                --specific_task_id ${cur_task_id} \
+                --local_log_dir "${local_log_dir}/${seed}" \
+                --seed "$seed" &
+
+            sleep "${sleep_time}"
+
+            viewpoint="B"
+            task="B"
+            read cur_viewpoint_weight_min cur_viewpoint_weight_max cur_task_id <<< "$(get_cur_weight_and_task_id ${viewpoint} ${task})"
+            python experiments/robot/libero/run_libero_eval_dp_minivla.py \
+                --model_family "${model_family}" \
+                --pretrained_checkpoint "${ckpt_path}" \
+                --task_suite_name=libero_spatial \
+                --prefix="libero_spatial_task_multi_${sub_dir}_${viewpoint}_${task}" \
+                --num_trials_per_task ${num_trials_per_task} \
+                --num_tasks_in_suite ${num_tasks_in_suite} \
+                --use_wandb false \
+                --viewpoint_rotate_upper_bound ${viewpoint_rotate_upper_bound} \
+                --viewpoint_rotate_lower_bound ${viewpoint_rotate_lower_bound} \
+                --viewpoint_rotate_min_interpolate_weight ${cur_viewpoint_weight_min} \
+                --viewpoint_rotate_max_interpolate_weight ${cur_viewpoint_weight_max} \
+                --need_color_change False \
+                --specific_task_id ${cur_task_id} \
+                --local_log_dir "${local_log_dir}/${seed}" \
+                --seed "$seed" &
+
+            sleep "${sleep_time}"
+
 
             viewpoint="AL"
             task="B"

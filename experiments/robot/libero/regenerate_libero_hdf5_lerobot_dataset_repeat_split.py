@@ -194,6 +194,7 @@ def main(args):
     lerobot_output_path = libero_home / repo_name
     
     hdf5_output_path = str(lerobot_output_path).replace("_lerobot/", "_hdf5/")
+    os.makedirs(hdf5_output_path, exist_ok=True)
     
     if lerobot_output_path.exists():
         print(f"Removing existing dataset at {lerobot_output_path}")
@@ -707,7 +708,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num_tasks_in_suite",
         type=int,
-        help="number of tasks in suite",
+        help="number of tasks in suite, for example, 20 tasks in libero spatial suite",
         default=100
     )
     
@@ -728,7 +729,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--demo_repeat_times",
         type=int,
-        help="demo repeat times",
+        help="repeat times for one trajectory",
         default=1    # 默认为1
     )
     
@@ -767,6 +768,7 @@ if __name__ == "__main__":
     args.change_light = args.change_light.lower() == "true"
     args.need_color_change = args.need_color_change.lower() == "true"
     args.need_hdf5 = args.need_hdf5.lower() == "true"
+    
     # Start data regeneration
     import time
     start_time = time.time()
