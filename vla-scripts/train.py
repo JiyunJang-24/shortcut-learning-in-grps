@@ -17,9 +17,10 @@ Run with:
 
 import json
 import os
-if '/mnt/hdd3' in os.getcwd():
-    os.environ["MASTER_ADDR"] = "127.0.0.1"
-    os.environ["MASTER_PORT"] = "29500"
+
+os.environ["MASTER_ADDR"] = "127.0.0.1"
+os.environ["MASTER_PORT"] = "29500"
+
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -149,7 +150,7 @@ def train(cfg: TrainConfig) -> None:
     hf_token = cfg.hf_token.read_text().strip() if isinstance(cfg.hf_token, Path) else os.environ[cfg.hf_token]
     worker_init_fn = set_global_seed(cfg.seed, get_worker_init_fn=True)
     run_dir = (cfg.run_root_dir / cfg.run_id)
-    if torch.distributed.get_rank() == 0:
+    if dist.get_rank() == 0:
         os.makedirs(run_dir, exist_ok=True)
         os.makedirs(cfg.run_root_dir / cfg.run_id / "checkpoints", exist_ok=True)
 
@@ -235,7 +236,7 @@ def train(cfg: TrainConfig) -> None:
     # Save dataset statistics for de-normalization at inference time
     if overwatch.is_rank_zero():
         save_dataset_statistics(vla_dataset.dataset_statistics, run_dir)
-
+        
     # Create Train Strategy
     overwatch.info(f"Initializing Train Strategy `{cfg.train_strategy}`")
     train_strategy = get_train_strategy(

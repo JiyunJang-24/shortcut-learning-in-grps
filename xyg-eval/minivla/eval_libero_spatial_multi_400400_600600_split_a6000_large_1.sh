@@ -1,8 +1,7 @@
 CONDA_BASE=$(conda info --base)
 source "$CONDA_BASE/etc/profile.d/conda.sh"
-export HF_ENDPOINT=https://hf-mirror.com
 export CUDA_DEVICE_ORDER="PCI_BUS_ID"
-conda activate openvla-mini
+conda activate shortcut-learning
 
 base_ckpt_dir=logs/2025-4-16/19-20-13_libero_qwen_pretrain_split_large/prism-qwen25-dinosiglip-224px+0_5b+mx-libero-90+n1+b16+x7/checkpoints
 # /mnt/hdd3/xingyouguang/projects/robotics/lerobot/outputs/train/2025-03-26/21-24-06_diffusion/checkpoints/030000/pretrained_model

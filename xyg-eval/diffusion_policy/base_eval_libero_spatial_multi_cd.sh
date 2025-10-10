@@ -1,8 +1,7 @@
 CONDA_BASE=$(conda info --base)
 source "$CONDA_BASE/etc/profile.d/conda.sh"
-export HF_ENDPOINT=https://hf-mirror.com
 export CUDA_DEVICE_ORDER="PCI_BUS_ID"
-conda activate openvla-mini
+conda activate shortcut-learning
 
 min_weight1="$1"
 max_weight1="$2"

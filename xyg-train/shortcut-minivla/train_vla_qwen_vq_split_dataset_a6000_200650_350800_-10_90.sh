@@ -1,12 +1,13 @@
 #!/bin/bash
 CONDA_BASE=$(conda info --base)
 source "$CONDA_BASE/etc/profile.d/conda.sh"
-export HF_ENDPOINT=https://hf-mirror.com
 export CUDA_DEVICE_ORDER="PCI_BUS_ID"
 export PRISMATIC_DATA_ROOT="${LIBERO_DATA_ROOT}"
 export MASTER_ADDR='127.0.0.1'
 export MASTER_PORT='29520'
-conda activate openvla-mini
+# export NCCL_DEBUG=INFO
+# export NCCL_P2P_DISABLE=1
+conda activate shortcut-learning
 
 
 # Next we train MiniVLA based on this Prism base VLM on LIBERO-90.
@@ -14,13 +15,12 @@ conda activate openvla-mini
 # LIBERO_DATA_ROOT=/mnt/nfs/CMG/xiejunlin/datasets/Robotics/libero
 DATA_MIX="minivla-spatial-split-dataset-200650-350800"
 # 判断路径是否存在, LIBERO_DATA_ROOT
-LIBERO_DATA_ROOT="/mnt/hdd3/xingyouguang/datasets/robotics/libero/libero_spatial_no_noops_island_split_rlds/xyg_50_02_-10.0_90.0"
+LIBERO_DATA_ROOT="/mnt/hdd4/xingyouguang/datasets/libero/libero_spatial_no_noops_island_split_rlds/xyg_50_02_-10.0_90.0"
 if [ -e ${LIBERO_DATA_ROOT} ] ; then 
     echo "LIBERO_PATH=${LIBERO_DATA_ROOT}"
 else 
-    # bash将字符串中的 hdd3 替换为 hdd2
-    LIBERO_DATA_ROOT=${LIBERO_DATA_ROOT/hdd3/hdd2}
-    echo "LIBERO_PATH=${LIBERO_DATA_ROOT}"
+    echo "LIBERO_PATH=${LIBERO_DATA_ROOT} not found, exit"
+    exit
 fi
 
 LOG_ROOT=libero_qwen_pretrain_split_large

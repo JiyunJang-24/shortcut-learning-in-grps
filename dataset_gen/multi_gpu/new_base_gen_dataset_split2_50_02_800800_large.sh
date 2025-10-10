@@ -6,21 +6,31 @@ conda activate shortcut-learning
 
 CUR_PATH=$(pwd)
 
+export MUJOCO_GL="egl"
 libero_task_suite="libero_spatial"
 libero_raw_data_dir="/mnt/hdd4/xingyouguang/datasets/libero/libero_spatial"
+
+if [[ ! -d $libero_raw_data_dir ]]; then
+    echo "ERROR: ${libero_raw_data_dir} not found"
+    exit
+fi
+
+echo "libero_raw_data_dir: ${libero_raw_data_dir}"
+
 libero_base_save_dir="${libero_raw_data_dir}_no_noops_island"
 
-viewpoint_rotate_lower_bound=15.0
-viewpoint_rotate_upper_bound=65.0
-vmin=0.400
-vmax=0.500
-num_tasks_in_suite=1
-specify_task_id=0
-number_demo_per_task=20
-demo_repeat_times=10
+viewpoint_rotate_lower_bound=-10.0
+viewpoint_rotate_upper_bound=90.0
+vmin=0.800
+vmax=0.800
+num_tasks_in_suite=5
+specify_task_id=2,4,6,7,9
+number_demo_per_task=50
+demo_repeat_times=2
+number_parallel_process=5
 
 if [ 1 -eq 1 ]; then
-    python experiments/robot/libero/regenerate_libero_hdf5_lerobot_dataset_repeat_split.py \
+    python experiments/robot/libero/regenerate_libero_hdf5_lerobot_dataset_repeat_split_multi_processor.py \
         --libero_task_suite $libero_task_suite \
         --libero_raw_data_dir $libero_raw_data_dir \
         --libero_base_save_dir $libero_base_save_dir \
@@ -29,7 +39,8 @@ if [ 1 -eq 1 ]; then
         --viewpoint_rotate_upper_bound $viewpoint_rotate_upper_bound \
         --vmin $vmin --vmax $vmax --need_color_change False \
         --num_tasks_in_suite $num_tasks_in_suite --specify_task_id $specify_task_id --number_demo_per_task $number_demo_per_task \
-        --demo_repeat_times $demo_repeat_times --change_light False
+        --demo_repeat_times $demo_repeat_times --change_light False \
+        --number_parallel_process "${number_parallel_process}"
 fi
 
 cd "${CUR_PATH}/dataset_git/rlds_dataset_builder/LIBERO_Spatial_XYG"
@@ -48,9 +59,8 @@ else
     rlds_dir="${libero_base_save_dir}_full_rlds"
 fi
 user_name="xyg_$(echo ${number_demo_per_task} | awk '{printf "%02d\n", $1}')_$(echo ${demo_repeat_times} | awk '{printf "%02d\n", $1}')_$(echo $viewpoint_rotate_lower_bound | awk '{printf "%.1f\n", $1}')_$(echo $viewpoint_rotate_upper_bound | awk '{printf "%.1f\n", $1}')"
-
 if [[ $num_tasks_in_suite -eq 1 ]]; then
-    viewpoint_path="v-$(echo $vmin | awk '{printf "%.3f\n", $1}')-$(echo $vmax | awk '{printf "%.3f\n", $1}')_num$(($specify_task_id+1))"
+    viewpoint_path="v-$(echo $vmin | awk '{printf "%.3f\n", $1}')-$(echo $vmax | awk '{printf "%.3f\n", $1}')_num$((specify_task_id+1))"
 else
     viewpoint_path="v-$(echo $vmin | awk '{printf "%.3f\n", $1}')-$(echo $vmax | awk '{printf "%.3f\n", $1}')_${specify_task_id}"
 fi
@@ -59,6 +69,12 @@ echo "${hdf5_dir}/${user_name}/${viewpoint_path}"
 echo "${rlds_dir}/${user_name}/${viewpoint_path}"
 
 export XYG_HDF5_PATH="${hdf5_dir}/${user_name}/${viewpoint_path}"
+
+# check "${rlds_dir}/${user_name}/${viewpoint_path}" 和 "${hdf5_dir}/${user_name}/${viewpoint_path}" 是否存在
+if [[ -d "${rlds_dir}/${user_name}/${viewpoint_path}" ]] || [[ ! -d "${hdf5_dir}/${user_name}/${viewpoint_path}" ]] ; then
+    echo "WARNING: ${rlds_dir}/${user_name}/${viewpoint_path} found or ${hdf5_dir}/${user_name}/${viewpoint_path} not found"
+    exit
+fi
 
 tfds_start_time=$(date +%s)
 tfds build --data_dir ${rlds_dir}/${user_name}/${viewpoint_path}

@@ -1,12 +1,13 @@
 #!/bin/bash
 CONDA_BASE=$(conda info --base)
 source "$CONDA_BASE/etc/profile.d/conda.sh"
-export HF_ENDPOINT=https://hf-mirror.com
 export CUDA_DEVICE_ORDER="PCI_BUS_ID"
 export PRISMATIC_DATA_ROOT="${LIBERO_DATA_ROOT}"
 export MASTER_ADDR='127.0.0.1'
 export MASTER_PORT='29520'
-conda activate openvla-mini
+# export NCCL_DEBUG=INFO
+# export NCCL_P2P_DISABLE=1
+conda activate shortcut-learning
 
 
 # Next we train MiniVLA based on this Prism base VLM on LIBERO-90.
@@ -14,19 +15,19 @@ conda activate openvla-mini
 # LIBERO_DATA_ROOT=/mnt/nfs/CMG/xiejunlin/datasets/Robotics/libero
 DATA_MIX="minivla-spatial-split-dataset-400400-600600"
 # 判断路径是否存在, LIBERO_DATA_ROOT
-LIBERO_DATA_ROOT="/mnt/hdd3/xingyouguang/datasets/robotics/libero/libero_spatial_no_noops_island_split_rlds/xyg_50_02_-10.0_90.0"
+LIBERO_DATA_ROOT="/mnt/hdd4/xingyouguang/datasets/libero/libero_spatial_no_noops_island_split_rlds/xyg_50_02_-10.0_90.0"
 if [ -e ${LIBERO_DATA_ROOT} ] ; then 
     echo "LIBERO_PATH=${LIBERO_DATA_ROOT}"
 else 
-    # bash将字符串中的 hdd3 替换为 hdd2
-    LIBERO_DATA_ROOT=${LIBERO_DATA_ROOT/hdd3/hdd2}
-    echo "LIBERO_PATH=${LIBERO_DATA_ROOT}"
+    echo "LIBERO_PATH=${LIBERO_DATA_ROOT} not found, exit"
+    exit
 fi
 
 LOG_ROOT=libero_qwen_pretrain_split_large
 WANDB_PROJECT="libero_qwen_pretrain_split_large"
 WANDB_ENTITY="1207481522" # should be you user name or team name in w&b account
 
+max_steps=10000
 WORLD_SIZE=8
 BATCH_SIZE=16
 CUDA_VISIBLE_DEVICES_LIST="0,1,2,3,4,5,6,7"
@@ -42,6 +43,7 @@ OMP_NUM_THREADS=4 torchrun --standalone --nnodes 1 --nproc-per-node "${WORLD_SIZ
   --vla.expected_world_size "${WORLD_SIZE}" \
   --vla.global_batch_size "$((${BATCH_SIZE} * ${WORLD_SIZE}))" \
   --vla.per_device_batch_size "${BATCH_SIZE}" \
+  --vla.max_steps "${max_steps}" \
   --image_aug False \
   --data_root_dir "${LIBERO_DATA_ROOT}" \
   --run_root_dir "${LOG_ROOT}" \

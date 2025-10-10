@@ -2,12 +2,12 @@
 unset CUDA_VISIBLE_DEVICES
 CONDA_BASE=$(conda info --base)
 source "$CONDA_BASE/etc/profile.d/conda.sh"
-conda activate openvla-mini
+conda activate shortcut-learning
 
 CUR_PATH=$(pwd)
 
 libero_task_suite="libero_spatial"
-libero_raw_data_dir="/mnt/hdd3/xingyouguang/datasets/robotics/libero/libero_spatial"
+libero_raw_data_dir="/mnt/hdd4/xingyouguang/datasets/libero/libero_spatial"
 libero_base_save_dir="${libero_raw_data_dir}_no_noops_island"
 
 viewpoint_rotate_lower_bound=15.0

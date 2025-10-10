@@ -1,10 +1,9 @@
 CONDA_BASE=$(conda info --base)
 source "$CONDA_BASE/etc/profile.d/conda.sh"
-export HF_ENDPOINT=https://hf-mirror.com
 export CUDA_DEVICE_ORDER="PCI_BUS_ID"
-conda activate openvla-mini
+conda activate shortcut-learning
 
-base_ckpt_dir=logs/2025-4-17/7-41-32_libero_qwen_pretrain_split_large/prism-qwen25-dinosiglip-224px+0_5b+mx-libero-90+n1+b16+x7/checkpoints
+base_ckpt_dir=logs/2025-10-9/9-4-35_libero_qwen_pretrain_split_large/prism-qwen25-dinosiglip-224px+0_5b+mx-libero-90+n1+b16+x7/checkpoints
 # /mnt/hdd3/xingyouguang/projects/robotics/lerobot/outputs/train/2025-03-26/21-24-06_diffusion/checkpoints/030000/pretrained_model
 # ls ${base_ckpt_dir} 写成一个 array数组
 ckpt_paths=($(ls "${base_ckpt_dir}"))
@@ -21,7 +20,7 @@ sleep_time=5
 task1_id_arr_str=$(printf "%s," "${task1_id_arr[@]}" | sed 's/,$//')
 task2_id_arr_str=$(printf "%s," "${task2_id_arr[@]}" | sed 's/,$//')
 local_log_dir="./experiments-test/logs-50-02-${min_weight1}-${max_weight1}-${task1_id_arr_str}-${min_weight2}-${max_weight2}-${task2_id_arr_str}-large"
-num_trials_per_task=10
+num_trials_per_task=5
 num_tasks_in_suite=1    # 测试的时候还是单个测试
 
 delta_shift=0.01
@@ -96,7 +95,7 @@ for sub_dir in "${ckpt_paths[@]}"; do
     #     continue
     # fi
 
-    if [ "${sub_dir}" == "step-002500-epoch-03-loss=1.0648.pt" ]; then  # 测过了
+    if [ "${sub_dir}" != "step-007500-epoch-09-loss=0.3362.pt" ]; then  # 测过了
         continue
     fi
 
