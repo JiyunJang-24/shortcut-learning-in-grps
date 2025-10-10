@@ -7,13 +7,12 @@ The codebase builds upon the official repositories of [openvla-mini](https://git
 Please see the [blog](https://lucky-light-sun.github.io/proj/shortcut-learning-in-grps/) and [paper](https://arxiv.org/abs/2508.06426) for more details.
 
 
-## Update and ToDo
+## Updates
 
 - [x] Environment setup
 - [x] Release and test dataset generation code
 - [x] Release and test diffusion policy code
 - [x] Release and test OpenVLA-Mini code
-- [ ] Pi0 code release: TODO
 
 
 
@@ -264,12 +263,6 @@ You can find evaluation results under `experiments-dp`. You can change the save 
 
 
 
-## Training & Evaluating Pi0
-
-- [ ] todo
-
-
-
 ## Results
 
 Below are the experiment results. For more visualizations, please see the [project website](https://lucky-light-sun.github.io/proj/shortcut-learning-in-grps/).
@@ -284,14 +277,15 @@ Below are the experiment results. For more visualizations, please see the [proje
 
 
 
-If you find our code or models useful in your work, please cite our paper: https://arxiv.org/abs/2508.06426
+If you find our code or models useful in your work, please cite our paper.
 
 ```bibtex
-@article{xing2025shortcut,
-    title={Shortcut Learning in Generalist Robot Policies: The Role of Dataset Diversity and Fragmentation},
-    author={Xing, Youguang and Luo, Xu and Xie, Junlin and Gao, Lianli and Shen, Heng Tao and Song, Jingkuan},
-    journal={arXiv preprint arXiv:2508.06426},
-    year={2025}
+@inproceedings{xing2025shortcut,
+  title={Shortcut learning in generalist robot policies: The role of dataset diversity and fragmentation},
+  author={Xing, Youguang and Luo, Xu and Xie, Junlin and Gao, Lianli and Shen, Heng Tao and Song, Jingkuan},
+  booktitle={Conference on Robot Learning},
+  pages={3239--3266},
+  year={2025}
 }
 
 ```
