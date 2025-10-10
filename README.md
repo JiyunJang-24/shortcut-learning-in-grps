@@ -2,6 +2,7 @@
 # Update and ToDo
 
 Project website: https://lucky-light-sun.github.io/proj/shortcut-learning-in-grps/
+
 Paper (CoRL 2025): https://arxiv.org/abs/2508.06426
 
 1. Environment setup
@@ -269,7 +270,7 @@ You can find evaluation results under `experiments-dp`. You can change the save 
 Below are the experiment results. For more visualizations, please see the project website: https://lucky-light-sun.github.io/proj/shortcut-learning-in-grps/.
 
 
-![Experiment Results](LIBERO_all_exp.png)
+![Experiment Results](./LIBERO_all_exp.png)
 
 
 
