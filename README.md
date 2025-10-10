@@ -9,19 +9,18 @@ Please see the [blog](https://lucky-light-sun.github.io/proj/shortcut-learning-i
 
 ## Update and ToDo
 
-1. Environment setup
-2. Release and test dataset generation code
-3. Release and test diffusion policy code
-4. Release and test OpenVLA-Mini (Please see the blog and paper for more details.MiniVLA) code
-
-Pi0 code release: TODO
+- [x] Environment setup
+- [x] Release and test dataset generation code
+- [x] Release and test diffusion policy code
+- [x] Release and test OpenVLA-Mini code
+- [ ] Pi0 code release: TODO
 
 
 
 ## Installation
 
 
-Environment setup for generating the LIBERO shortcut datasets (see Section 3.3, Experimental Verification on LIBERO, in our paper). The same environment is also used for training MiniVLA.
+Environment setup for generating the LIBERO shortcut datasets (see Section 3.3, Experimental Verification on LIBERO, in our paper for details). The same environment is also used for training MiniVLA.
 
 
 To install the envrionment, you should execute the following commands in sequence.
@@ -104,24 +103,18 @@ We use the LIBERO Object suite as the simulation dataset. It contains 10 tasks.
 
 Step 1: Download the original LIBERO Object dataset. The LIBERO shortcut datasets are derived from this dataset by rotating the camera viewpoints.
 
-```
-dataset_path="/mnt/hdd4/xingyouguang/datasets/libero"
-conda activate shortcut-learning
-cd LIBERO
-python benchmark_scripts/download_libero_datasets.py --datasets libero_spatial --download-dir "${dataset_path}"
-
-
-export HF_ENDPOINT=https://hf-mirror.com
+```bash
 hf download --repo-type dataset --include "libero_spatial/*" --local-dir ./ yifengzhu-hf/LIBERO-datasets
 ```
 
 Step 2: Modify camera viewpoints (task-irrelevant factor) to construct dataset islands. To reproduce experiments like Figure 6 in our paper (also shown in the Results section below), we provide multiple dataset configurations.
-For Diffusion Policy, there are 3 viewpoint-diversity settings and 4 viewpoint-disparity (distance) settings.
-For OpenVLA-Mini, there are 4 viewpoint-diversity settings and 4 viewpoint-disparity (distance) settings.
+
+- For Diffusion Policy, there are 3 viewpoint-diversity settings and 4 viewpoint-disparity (distance) settings.
+- For OpenVLA-Mini, there are 4 viewpoint-diversity settings and 4 viewpoint-disparity (distance) settings.
 
 Choose any configuration based on your needs.
 
-```
+```bash
 cd shortcut-learning-in-grps
 
 # IMPORTANT: Update the `libero_raw_data_dir` variable and ensure the environment name (`conda activate shortcut-learning`) is correct inside the bash scripts below.
@@ -175,23 +168,23 @@ bash dataset_gen/multi_gpu/new_base_gen_dataset_split1_50_02_350800_large.sh # t
 
 After generating the LIBERO Shortcut Datasets, train MiniVLA on your chosen dataset configuration (see the OpenVLA-Mini diversity settings above).
 
-1) Create a Hugging Face token file
-- Create a file named `.hf_token` in the project root (`shortcut-learning-in-grps`) and paste your Hugging Face token into it.
+1.Create a Hugging Face token file
+  - Create a file named `.hf_token` in the project root (`shortcut-learning-in-grps`) and paste your Hugging Face token into it.
 
-2) Download the VLM backbone
-- Model: `Stanford-ILIAD/prism-qwen25-extra-dinosiglip-224px-0_5b`
-- Command: `hf download --repo-type model Stanford-ILIAD/prism-qwen25-extra-dinosiglip-224px-0_5b`
+2.Download the VLM backbone
+  - Model: `Stanford-ILIAD/prism-qwen25-extra-dinosiglip-224px-0_5b`
+  - Command: `hf download --repo-type model Stanford-ILIAD/prism-qwen25-extra-dinosiglip-224px-0_5b`
 
-3) Point training script to your backbone checkpoint
-- Edit `CKPT_PATH` inside `train_vla_qwen_vq_split_dataset_a6000_200200_800800_-10_90.sh` to the path of your downloaded backbone.
+3.Point training script to your backbone checkpoint
+  - Edit `CKPT_PATH` inside `train_vla_qwen_vq_split_dataset_a6000_200200_800800_-10_90.sh` to the path of your downloaded backbone.
 
-4) Download action tokenizer weights
+4.Download action tokenizer weights
 ```
 cd shortcut-learning-in-grps
 mkdir vq
 hf download --repo-type model --local-dir ./vq Stanford-ILIAD/pretrain_vq
 ```
-
+5.Run training scripts.
 ```
 # IMPORTANT: Set `libero_raw_data_dir` inside the scripts below to your dataset path.
 # OpenVLA-Mini diversity setting 1 (lowest viewpoint diversity; 20%→20% and 80%→80%)
@@ -201,6 +194,7 @@ bash xyg-train/shortcut-minivla/train_vla_qwen_vq_split_dataset_a6000_200350_650
 # Additional training scripts for settings 3–4 are available in `xyg-train/shortcut-minivla`.
 # Training checkpoints will be saved under the `logs` directory.
 ```
+
 
 With the trained checkpoint, evaluate MiniVLA. The command below evaluates diversity setting 1 (lowest viewpoint diversity).
 
@@ -216,8 +210,6 @@ bash xyg-eval/minivla/seed/eval_libero_spatial_multi_200200_800800_split_a6000_l
 
 ## Training & Evaluating Diffusion Policy
 
-
-Training
 
 Train Diffusion Policy on your selected dataset island pair (see the Diffusion Policy settings above).
 
@@ -255,10 +247,9 @@ CUDA_VISIBLE_DEVICES=0 python lerobot/scripts/train.py \
 ```
 
 
-Testing
+With the trained checkpoint, evaluate Diffusion Policy. The command below evaluates the pair [0.400, 0.400] (sub-dataset 1) and [0.600, 0.600] (sub-dataset 2).
 
 ```
-# With the trained checkpoint, evaluate Diffusion Policy. The command below evaluates the pair [0.400, 0.400] (sub-dataset 1) and [0.600, 0.600] (sub-dataset 2).
 # `lerobot/outputs/train/2025-10-09/02-34-42_diffusion/checkpoints` is the checkpoint directory for the trained Diffusion Policy.
 # `True` is the value for `need_inner_interpolate` and should always be true.
 # To evaluate other settings, change the viewpoint ranges and checkpoint directory accordingly.
@@ -275,7 +266,7 @@ You can find evaluation results under `experiments-dp`. You can change the save 
 
 ## Training & Evaluating Pi0
 
-[ ] todo
+- [ ] todo
 
 
 
