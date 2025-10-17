@@ -26,7 +26,7 @@ pip install opencv-python numpy==1.26.4
 git clone https://github.com/Lucky-Light-Sun/lerobot.git
 cd lerobot 
 pip install -e .
-pip install draccus==0.8.0 numpy==1.26.4
+pip install draccus==0.8.0 numpy==1.26.4 rerun-sdk==0.23.0
 # RLDS dataset builder
 cd ..
 cd dataset_git

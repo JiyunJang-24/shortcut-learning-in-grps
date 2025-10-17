@@ -3,12 +3,12 @@ CONDA_BASE=$(conda info --base)
 source "$CONDA_BASE/etc/profile.d/conda.sh"
 # export CUDA_DEVICE_ORDER="PCI_BUS_ID"
 conda activate shortcut-learning
-export PYTHONPATH="/root/Desktop/workspace/shortcut-learning-in-grps/LIBERO:$PYTHONPATH"
-
-base_ckpt_dir="/root/Desktop/workspace/shortcut-learning-in-grps/lerobot/outputs/train/2025-10-15/15-15-26_DP_ex1_angle_from_0_to_315"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
+REPO_ROOT="${SCRIPT_DIR}"
+export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
+base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2025-10-15/15-15-26_DP_ex1_angle_from_0_to_315"
 checkpoint_dir="${base_ckpt_dir}/checkpoints"
 checkpoint_step="075000"
-
 ckpt_path="${checkpoint_dir}/${checkpoint_step}/pretrained_model"
 log_root="./logs-angle-test"
 export MUJOCO_GL=egl
@@ -20,17 +20,14 @@ angles=(0)
 tasks=(0)       # 0=A, 4=B
 seeds=(7)
 export PYTHONUNBUFFERED=1
-
 mkdir -p "${log_root}"
-
 # 실행
 for seed in "${seeds[@]}"; do
   for task in "${tasks[@]}"; do
     for angle in "${angles[@]}"; do
       outdir="${log_root}/seed_${seed}/task_${task}/angle_${angle}"
       mkdir -p "$outdir"
-
-      CUDA_VISIBLE_DEVICES=0 python -u experiments/robot/libero/run_libero_eval_dp_minivla.py \
+      python -u experiments/robot/libero/run_libero_eval_dp_minivla.py \
         --model_family diffusion \
         --pretrained_checkpoint "${ckpt_path}" \
         --task_suite_name libero_spatial \
@@ -49,4 +46,3 @@ for seed in "${seeds[@]}"; do
     done
   done
 done
-
