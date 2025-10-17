@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 python experiments/robot/libero/regenerate_libero_hdf5_lerobot_dataset_repeat_split.py \
     --libero_task_suite libero_spatial \

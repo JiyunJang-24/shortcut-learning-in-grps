@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Regenerates a LIBERO dataset (HDF5 files) by replaying demonstrations in the environments.
 

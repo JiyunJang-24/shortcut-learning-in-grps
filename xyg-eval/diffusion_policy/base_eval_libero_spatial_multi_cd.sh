@@ -12,8 +12,8 @@ need_inner_interpolate="$6"
 
 task1_id=0
 task2_id=4
-viewpoint_rotate_lower_bound=15.0
-viewpoint_rotate_upper_bound=65.0
+viewpoint_rotate_lower_bound=0.0
+viewpoint_rotate_upper_bound=45.0
 
 model_family="diffusion"
 

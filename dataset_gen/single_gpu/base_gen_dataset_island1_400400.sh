@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # 首先生成 hdf5, lerobot 文件，然后根据 hdf5 转为 rlds 文件
 unset CUDA_VISIBLE_DEVICES
 CONDA_BASE=$(conda info --base)
@@ -7,7 +8,7 @@ conda activate shortcut-learning
 CUR_PATH=$(pwd)
 
 libero_task_suite="libero_spatial"
-libero_raw_data_dir="/mnt/hdd4/xingyouguang/datasets/libero/libero_spatial"
+libero_raw_data_dir="/root/Desktop/workspace/shortcut-learning-in-grps/dataset_git/libero_spatial"
 libero_base_save_dir="${libero_raw_data_dir}_no_noops_island"
 
 viewpoint_rotate_lower_bound=15.0

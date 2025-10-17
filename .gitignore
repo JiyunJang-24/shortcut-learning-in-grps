@@ -178,6 +178,8 @@ xyg_50_02_-10.0_90.0/
 xyg_50_02_15.0_65.0/
 xyg_*_15.0_65.0/
 xyg_*_-10.0_90.0/
+xyg_*/
 tmp_dir*/
 xyg-plot/
 lerobot/
+dataset_git/libero_*/

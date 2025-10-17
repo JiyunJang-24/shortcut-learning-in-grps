@@ -15,12 +15,14 @@ from experiments.robot.robot_utils import (
     DATE_TIME,
 )
 
-
 def get_libero_env(task, model_family, resolution=256):
     """Initializes and returns the LIBERO environment, along with the task description."""
     task_description = task.language
     task_bddl_file = os.path.join(get_libero_path("bddl_files"), task.problem_folder, task.bddl_file)
     env_args = {"bddl_file_name": task_bddl_file, "camera_heights": resolution, "camera_widths": resolution}
+    import pdb; pdb.set_trace()
+    print(os.getenv("CUDA_VISIBLE_DEVICES"), os.getenv("MUJOCO_GL"), os.getenv("MUJOCO_EGL_DEVICE_ID"))
+
     env = OffScreenRenderEnv(**env_args)
     env.seed(0)  # IMPORTANT: seed seems to affect object positions even when using fixed initial state
     return env, task_description
