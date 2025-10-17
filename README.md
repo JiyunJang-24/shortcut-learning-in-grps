@@ -25,7 +25,7 @@ Environment setup for generating the LIBERO shortcut datasets (see Section 3.3, 
 To install the envrionment, you should execute the following commands in sequence.
 
 ```bash
-git clone https://github.com/Lucky-Light-Sun/shortcut-learning-in-grps.git 
+git clone https://github.com/jiyunjang-24/shortcut-learning-in-grps.git 
 conda create -n shortcut-learning python=3.10 -y
 conda activate shortcut-learning
 
@@ -54,7 +54,7 @@ pip install -r experiments/robot/libero/libero_requirements.txt
 
 
 # LeRobot (for dataset format conversion)
-git clone https://github.com/Lucky-Light-Sun/lerobot.git
+git clone https://github.com/jiyunjang-24/lerobot.git
 cd lerobot 
 pip install -e .
 
