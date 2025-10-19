@@ -7,15 +7,15 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -
 REPO_ROOT="${SCRIPT_DIR}"
 export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 
-base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2025-10-15/15-15-26_DP_ex1_angle_from_0_to_315"
+base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2025-10-17/15-49-19_Dynamic_DP_ex1_angle_from_0_to_315"
 checkpoint_dir="${base_ckpt_dir}/checkpoints"
-checkpoint_step="075000"
+checkpoint_step="045000"
 ckpt_path="${checkpoint_dir}/${checkpoint_step}/pretrained_model"
 log_root="./logs-angle-test"
 export MUJOCO_GL=egl
 export MUJOCO_EGL_DEVICE_ID=0
-angles=(22.5 45)
-tasks=(4)       # 0=A, 4=B
+angles=(0 22.5 45)
+tasks=(0 4)       # 0=A, 4=B
 seeds=(7 8 9)
 # angles=(0)
 # tasks=(0)       # 0=A, 4=B
@@ -35,7 +35,7 @@ for seed in "${seeds[@]}"; do
         --prefix "angle_${angle}_task_${task}_seed_${seed}_$(basename "$base_ckpt_dir")_${checkpoint_step}" \
         --num_trials_per_task 25 \
         --num_tasks_in_suite 1 \
-        --use_wandb false \
+        --use_wandb true \
         --wandb_project libero_DP \
         --wandb_entity DynamicVLA \
         --viewpoint_rotate_lower_bound "${angle}" \
@@ -45,7 +45,9 @@ for seed in "${seeds[@]}"; do
         --need_color_change false \
         --specific_task_id "${task}" \
         --local_log_dir "${outdir}" \
-        --seed "${seed}"
+        --seed "${seed}" \
+        --policy.use_dynamic_feature true \
+
     done
   done
 done

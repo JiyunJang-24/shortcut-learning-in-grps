@@ -46,3 +46,4 @@ pip install torchcodec==0.2.1 diffusers==0.32.2
 pip install datasets==3.4.1 huggingface-hub==0.29.2 draccus==0.8.0
 pip install imageio==2.37.0
 pip install numpy==1.26.4
+pip install -U moviepy==1.0.3

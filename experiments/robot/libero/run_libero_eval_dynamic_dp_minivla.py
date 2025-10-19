@@ -57,7 +57,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(map(str, gpu_indices))
 os.environ["PRISMATIC_DATA_ROOT"] = "/mnt/hdd3/xingyouguang/datasets/robotics/libero"
 import torch
 memory_x = torch.ones(6*8*8, 1024, 1024).cuda()
-import json
+
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -72,7 +72,7 @@ from libero.libero import benchmark
 import torch
 import wandb
 import shutil
-
+import json
 # Append current directory so that interpreter can find experiments.robot
 sys.path.append("../..")
 from experiments.robot.libero.libero_utils import (
@@ -240,8 +240,10 @@ def eval_libero(cfg: GenerateConfig) -> None:
     if cfg.model_family == "diffusion":
         from lerobot.common.policies.diffusion.modeling_diffusion import DiffusionPolicy
         pretrained_policy_path = cfg.pretrained_checkpoint
-        stats_path = pretrained_policy_path+"/stats.json"
-        
+        stats_path = pretrained_policy_path / "stats.json"
+        if not stats_path.exists():
+            raise FileNotFoundError(f"stats.json not found under: {pretrained_policy_path}")
+
         with open(stats_path, "r", encoding="utf-8") as f:
             stats_raw = json.load(f)
 
