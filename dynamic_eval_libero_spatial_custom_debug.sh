@@ -8,20 +8,18 @@ REPO_ROOT="${SCRIPT_DIR}"
 export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 export PYTHONPATH="${REPO_ROOT}/lerobot:${PYTHONPATH}"
 export PYTHONPATH="${REPO_ROOT}/lerobot/unimatch:${PYTHONPATH}"
-base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/Dynamic_DP_with_aug/07-00-56_Dynamic_DP_with_axis_augmented_ex1_angle_from_0_to_45_mix_dynamic_datas"
+base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/Dynamic_DP_without_aug/15-49-19_Dynamic_DP_ex1_angle_from_0_to_315"
 checkpoint_dir="${base_ckpt_dir}/checkpoints"
-checkpoint_step="040000"
+checkpoint_step="060000"
 ckpt_path="${checkpoint_dir}/${checkpoint_step}/pretrained_model"
 log_root="./logs-angle-test"
 export MUJOCO_GL=egl
-# 실행
-
-angles=(0 22.5 45)
-tasks=(0 4)       # 0=A, 4=B
-seeds=(7 8 9)
-# angles=(0)
-# tasks=(0)       # 0=A, 4=B
-# seeds=(7)
+# angles=(0 22.5 45)
+# tasks=(0 4)       # 0=A, 4=B
+# seeds=(7 8 9)
+angles=(0)
+tasks=(0)       # 0=A, 4=B
+seeds=(10)
 export PYTHONUNBUFFERED=1
 mkdir -p "${log_root}"
 # 실행
@@ -37,8 +35,8 @@ for seed in "${seeds[@]}"; do
         --prefix "angle_${angle}_task_${task}_seed_${seed}_$(basename "$base_ckpt_dir")_${checkpoint_step}" \
         --num_trials_per_task 25 \
         --num_tasks_in_suite 1 \
-        --use_wandb true \
-        --wandb_project libero_DP_eval \
+        --use_wandb false \
+        --wandb_project libero_DP \
         --wandb_entity DynamicVLA \
         --viewpoint_rotate_lower_bound "${angle}" \
         --viewpoint_rotate_upper_bound "${angle}" \

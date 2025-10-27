@@ -246,11 +246,12 @@ def eval_libero(cfg: GenerateConfig) -> None:
             stats_raw = json.load(f)
 
         dataset_stats = _json_to_tensors(stats_raw)
-        try: 
-            dataset_aug_stats = dataset_stats['aug_stats']
-            policy = DiffusionPolicy.from_pretrained(pretrained_policy_path, dataset_stats=dataset_stats, dataset_aug_stats=dataset_aug_stats)
-        except:
-            policy = DiffusionPolicy.from_pretrained(pretrained_policy_path, dataset_stats=dataset_stats)
+        policy = DiffusionPolicy.from_pretrained(pretrained_policy_path, dataset_stats=dataset_stats)
+        # try: 
+        #     dataset_aug_stats = dataset_stats['aug_stats']
+        #     policy = DiffusionPolicy.from_pretrained(pretrained_policy_path, dataset_stats=dataset_stats, dataset_aug_stats=dataset_aug_stats)
+        # except:
+        #     policy = DiffusionPolicy.from_pretrained(pretrained_policy_path, dataset_stats=dataset_stats)
     else:
         policy = get_model(cfg)
         model = policy
@@ -566,7 +567,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
             }
         )
         wandb.save(local_log_filepath)
-
+        wandb.finish()
 
 if __name__ == "__main__":
     eval_libero()

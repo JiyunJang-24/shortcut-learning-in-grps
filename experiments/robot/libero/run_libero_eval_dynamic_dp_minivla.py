@@ -82,6 +82,7 @@ from experiments.robot.libero.libero_utils import (
     quat2axisangle,
     save_rollout_video,
     save_rollout_video_dir,
+    save_dynamic_rollout_video,
 )
 from experiments.robot.openvla_utils import get_processor
 from experiments.robot.robot_utils import (
@@ -240,12 +241,12 @@ def eval_libero(cfg: GenerateConfig) -> None:
     if cfg.model_family == "diffusion":
         from lerobot.common.policies.diffusion.modeling_diffusion import DiffusionPolicy
         pretrained_policy_path = cfg.pretrained_checkpoint
-        stats_path = pretrained_policy_path / "stats.json"
-        if not stats_path.exists():
-            raise FileNotFoundError(f"stats.json not found under: {pretrained_policy_path}")
-
-        with open(stats_path, "r", encoding="utf-8") as f:
-            stats_raw = json.load(f)
+        stats_path = pretrained_policy_path + "/stats.json"
+        try:
+            with open(stats_path, "r", encoding="utf-8") as f:
+                stats_raw = json.load(f)
+        except:
+            AssertionError("there is no stats!")
 
         dataset_stats = _json_to_tensors(stats_raw)
         try: 
@@ -358,6 +359,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
         # Start episodes
         task_episodes, task_successes = 0, 0
         for episode_idx in tqdm.tqdm(range(cfg.num_trials_per_task)):
+            
             print(f"\nTask: {task_description}")
             log_file.write(f"\nTask: {task_description}\n")
 
@@ -382,9 +384,69 @@ def eval_libero(cfg: GenerateConfig) -> None:
             # change the transparency of the transparent object
             env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
             
+            base_action_list = [np.array([1, -1, 1, 0, 0, 0, 1]), np.array([-1, 1, 0, 0, 0, 0, 1]), np.array([1, 0, -1, 0, 0, 0, 0])]
+            # for i in range(len(base_action_list)):
+            #     vec = np.random.uniform(-1, 1, size=7)
+            #     base_action_list[i] = vec
+            print(base_action_list)
+            dynamic_replay_images = []
+            dynamic_data_list = []
             # Set initial states
             obs = env.set_init_state(initial_states[episode_idx])
+            print(f"Collecting dynamic dataset ...")
+            log_file.write(f"Collecting dynamic dataset ...\n")
+            t=0
+            while t < cfg.num_steps_wait:
+                obs, reward, done, info = env.step(get_libero_dummy_action(cfg.model_family))
+                t += 1
+            chunk_action_size = 4
+            #policy.window_size -1
+            dynamic_image = []
+            dynamic_action = []
+            for index, base_action in enumerate(base_action_list):
+                img1 = torch.from_numpy(np.flipud(obs["agentview_image"]).copy())
+                img1 = img1.to(torch.float32) / 255
+                img1 = img1.permute(2, 0, 1)  # H, W, C -> C, H, W
+                # Send data tensors from CPU to GPU
+                img1 = img1.to('cuda', non_blocking=True)
+                # dynamic_replay_images.append(np.flipud(obs["agentview_image"]).copy())
 
+                for _ in range(chunk_action_size):
+                    obs, reward, done, info = env.step(np.array(base_action))
+
+                img2 = torch.from_numpy(np.flipud(obs["agentview_image"]).copy())
+                img2 = img2.to(torch.float32) / 255
+                img2 = img2.permute(2, 0, 1)  # H, W, C -> C, H, W
+                # Send data tensors from CPU to GPU
+                img2 = img2.to('cuda', non_blocking=True)
+                # dynamic_replay_images.append(np.flipud(obs["agentview_image"]).copy())
+                img_seq = torch.stack([img1, img2])
+                dynamic_image.append(img_seq)
+                act_seq = torch.tensor(base_action)
+                dynamic_action.append(act_seq)
+            # save_dynamic_rollout_video(dynamic_replay_images, num=index)
+            dynamic_images = torch.stack(dynamic_image)
+            dynamic_actions = torch.stack(dynamic_action).to('cuda', non_blocking=True)
+
+            env.reset()
+            viewpoint_rotate = np.random.uniform(viewpoint_rotate_min, viewpoint_rotate_max)
+            color_scale = np.random.uniform(color_scale_min, color_scale_max)
+            
+            # recolor and rotate scene
+            camera_id = env.sim.model.camera_name2id(camera_name)
+            if need_color_change:
+                env = rotate_recolor_dataset.recolor_and_rotate_scene(env, alpha=color_scale, color_light_a=color_light_a, color_light_b=color_light_b, 
+                                                                     camera_id=camera_id, camera_name=camera_name, robot_base_name=robot_base_name, 
+                                                                     theta=viewpoint_rotate, debug=False, need_change_light=change_light, base_num=base_num)
+            else:
+                env = rotate_recolor_dataset.rotate_camera(env=env, camera_id=camera_id, camera_name=camera_name, 
+                                                           robot_base_name=robot_base_name, theta=viewpoint_rotate, debug=False)
+            
+            # change the transparency of the transparent object
+            env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
+            
+            # Set initial states
+            obs = env.set_init_state(initial_states[episode_idx])
             # Setup
             t = 0
             replay_images = []
@@ -431,6 +493,8 @@ def eval_libero(cfg: GenerateConfig) -> None:
                         observation = {
                             "observation.state": state,
                             "observation.image": image,
+                            "dynamic.image": dynamic_images,
+                            "dynamic.action": dynamic_actions,
                         }
 
                         with torch.inference_mode():
@@ -568,6 +632,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
             }
         )
         wandb.save(local_log_filepath)
+        wandb.finish()
 
 
 if __name__ == "__main__":

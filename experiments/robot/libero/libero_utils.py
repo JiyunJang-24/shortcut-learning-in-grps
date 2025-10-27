@@ -79,6 +79,19 @@ def save_rollout_video(rollout_images, idx, success, task_description, log_file=
     return mp4_path
 
 
+def save_dynamic_rollout_video(rollout_images, num):
+    """Saves an MP4 replay of an episode."""
+    rollout_dir = f"./rollouts/{DATE}+{str(num)}"
+    os.makedirs(rollout_dir, exist_ok=True)
+    # processed_task_description = task_description.lower().replace(" ", "_").replace("\n", "_").replace(".", "_")[:50]
+    mp4_path = f"{rollout_dir}/Dynamic_data_{DATE_TIME}.mp4"
+    video_writer = imageio.get_writer(mp4_path, fps=30)
+    for img in rollout_images:
+        video_writer.append_data(img)
+    video_writer.close()
+    print(f"Saved Dynamic rollout MP4 at path {mp4_path}")
+    return mp4_path
+
 def save_rollout_video_dir(rollout_images, idx, success, task_description, log_file=None, 
                            task_id=None, episode_idx=None, task_suite_name=None, local_log_filepath=None):
     """Saves an MP4 replay of an episode."""
