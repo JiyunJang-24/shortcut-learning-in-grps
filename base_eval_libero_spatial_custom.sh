@@ -7,9 +7,9 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -
 REPO_ROOT="${SCRIPT_DIR}"
 export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 
-base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2025-11-01/06-23-32_DP_ex1_angle_from_0_135_225"
+base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2025-11-01/21-36-43_DP_ex1_angle_from_0"
 checkpoint_dir="${base_ckpt_dir}/checkpoints"
-checkpoint_step="045000"
+checkpoint_step="030000"
 ckpt_path="${checkpoint_dir}/${checkpoint_step}/pretrained_model"
 log_root="./logs-angle-test"
 export MUJOCO_GL=egl

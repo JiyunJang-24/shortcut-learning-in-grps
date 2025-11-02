@@ -271,9 +271,9 @@ def eval_libero(cfg: GenerateConfig) -> None:
         dataset_stats = _json_to_tensors(stats_raw)
         try: 
             dataset_aug_stats = dataset_stats['aug_stats']
-            policy = DiffusionPolicy.from_pretrained(pretrained_policy_path, dataset_stats=dataset_stats, dataset_aug_stats=dataset_aug_stats)
+            policy = DiffusionPolicy.from_pretrained(pretrained_policy_path, dataset_stats=dataset_stats, dataset_aug_stats=dataset_aug_stats, evaluation=True)
         except:
-            policy = DiffusionPolicy.from_pretrained(pretrained_policy_path, dataset_stats=dataset_stats)
+            policy = DiffusionPolicy.from_pretrained(pretrained_policy_path, dataset_stats=dataset_stats, evaluation=True)
     else:
         policy = get_model(cfg)
         model = policy
