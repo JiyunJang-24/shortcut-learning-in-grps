@@ -1,3 +1,5 @@
+conda create -n shortcut-learning python=3.10 -y
+conda activate shortcut-learning
 
 # You may use a different PyTorch version, but we recommend this exact combo as others may fail.
 # Official guides: https://pytorch.org/get-started/locally/ and https://pytorch.org/get-started/previous-versions/
