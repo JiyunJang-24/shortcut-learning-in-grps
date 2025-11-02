@@ -51,6 +51,7 @@ def get_free_gpu_indices(num_gpus=1, debug=False):
     return sorted_gpu_indices[:num_gpus]
 
 gpu_indices = get_free_gpu_indices()
+import random
 
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(map(str, gpu_indices))
@@ -94,7 +95,9 @@ from experiments.robot.robot_utils import (
     normalize_gripper_action,
     set_seed_everywhere,
 )
-
+from lerobot.common.datasets.factory import make_dataset
+from lerobot.configs import parser
+from lerobot.configs.train import TrainPipelineConfig, TRAIN_CONFIG_NAME
 import sys
 if os.getcwd() not in sys.path:
     sys.path.append(os.getcwd())
@@ -117,6 +120,17 @@ def _json_to_tensors(obj):
     if isinstance(obj, torch.Tensor):
         return obj
     return obj  # 그 외 타입은 그대로 (예: 문자열 키 등)
+
+from pathlib import Path
+# ⚠️ 실제 경로에 맞게 import 경로 조정
+def load_train_cfg_from_pretrained(pretrained_dir: str | Path) -> TrainPipelineConfig:
+    p = Path(pretrained_dir)
+    # 폴더를 가리키면 그 폴더에서, 혹시 파일이면 그 부모에서 탐색
+    candidates = [p, p.parent]
+    for d in candidates:
+        if (d / TRAIN_CONFIG_NAME).exists():
+            return TrainPipelineConfig.from_pretrained(d)
+    raise FileNotFoundError(f"'{TRAIN_CONFIG_NAME}' not found near {p}")
 
 @dataclass
 class GenerateConfig:
@@ -179,7 +193,8 @@ class GenerateConfig:
     base_num: float = 0.05
     
     specific_task_id: int = None
-
+    use_demo_data_for_dynamic: bool = False
+    use_demo_data_from_same_task: bool = False
 
 def check_eval_finish(local_log_filepath):
     base_path = os.path.dirname(local_log_filepath)
@@ -208,6 +223,11 @@ def eval_libero(cfg: GenerateConfig) -> None:
         assert cfg.center_crop, "Expecting `center_crop==True` because model was trained with image augmentations!"
     assert not (cfg.load_in_8bit and cfg.load_in_4bit), "Cannot use both 8-bit and 4-bit quantization!"
 
+    train_cfg = load_train_cfg_from_pretrained(cfg.pretrained_checkpoint)
+    repo_root = Path(os.environ.get("REPO_ROOT", Path(__file__).resolve().parents[2]))
+    new_root  = repo_root / "dataset_git" / "libero_spatial_no_noops_island_1_lerobot"
+    train_cfg.dataset.root = str(new_root.resolve())
+    multiple_dataset = make_dataset(train_cfg)
     # Set random seed
     set_seed_everywhere(cfg.seed)
     
@@ -383,51 +403,93 @@ def eval_libero(cfg: GenerateConfig) -> None:
             
             # change the transparency of the transparent object
             env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
-            
-            base_action_list = [np.array([1, -1, 1, 0, 0, 0, 1]), np.array([-1, 1, 0, 0, 0, 0, 1]), np.array([1, 0, -1, 0, 0, 0, 0])]
-            # for i in range(len(base_action_list)):
-            #     vec = np.random.uniform(-1, 1, size=7)
-            #     base_action_list[i] = vec
-            print(base_action_list)
-            dynamic_replay_images = []
-            dynamic_data_list = []
-            # Set initial states
-            obs = env.set_init_state(initial_states[episode_idx])
-            print(f"Collecting dynamic dataset ...")
-            log_file.write(f"Collecting dynamic dataset ...\n")
-            t=0
-            while t < cfg.num_steps_wait:
-                obs, reward, done, info = env.step(get_libero_dummy_action(cfg.model_family))
-                t += 1
-            chunk_action_size = 4
-            #policy.window_size -1
-            dynamic_image = []
-            dynamic_action = []
-            for index, base_action in enumerate(base_action_list):
-                img1 = torch.from_numpy(np.flipud(obs["agentview_image"]).copy())
-                img1 = img1.to(torch.float32) / 255
-                img1 = img1.permute(2, 0, 1)  # H, W, C -> C, H, W
-                # Send data tensors from CPU to GPU
-                img1 = img1.to('cuda', non_blocking=True)
-                # dynamic_replay_images.append(np.flipud(obs["agentview_image"]).copy())
+            if cfg.use_demo_data_for_dynamic:
+                #TODO dataset_idx는 angle 기준으로 나눠야함
+                ref_angle = viewpoint_rotate
+                
+                if cfg.use_demo_data_from_same_task:
+                    if task_ids[0] == 0:
+                        num = 0
+                    else:
+                        num = 1
+                    candidates = [multiple_dataset.angle_to_indices[ref_angle][num]]
+                else:
+                    candidates = multiple_dataset.angle_to_indices[ref_angle]
+                # 2) 후보 중에서 "데이터셋 인덱스"를 랜덤으로 3번 선택 (중복 허용)
+                #    - 중복 허용이므로 len(candidates) < 3 여도 문제 없음
+                chosen_ds_idxs = random.choices(candidates, k=3)
 
-                for _ in range(chunk_action_size):
-                    obs, reward, done, info = env.step(np.array(base_action))
+                images, actions, src_indices = [], [], []
+                for ds_i in chosen_ds_idxs:
+                    ds = multiple_dataset._datasets[ds_i]
+                    # 시작 프레임 랜덤 선택 (window_size 보장)
+                    max_start = ds.num_frames - multiple_dataset.window_size
+                    start = random.randrange(max_start) if max_start > 0 else 0
+                    next_idx = start + multiple_dataset.window_size  # 이미지 비교용
 
-                img2 = torch.from_numpy(np.flipud(obs["agentview_image"]).copy())
-                img2 = img2.to(torch.float32) / 255
-                img2 = img2.permute(2, 0, 1)  # H, W, C -> C, H, W
-                # Send data tensors from CPU to GPU
-                img2 = img2.to('cuda', non_blocking=True)
-                # dynamic_replay_images.append(np.flipud(obs["agentview_image"]).copy())
-                img_seq = torch.stack([img1, img2])
-                dynamic_image.append(img_seq)
-                act_seq = torch.tensor(base_action)
-                dynamic_action.append(act_seq)
-            # save_dynamic_rollout_video(dynamic_replay_images, num=index)
-            dynamic_images = torch.stack(dynamic_image)
-            dynamic_actions = torch.stack(dynamic_action).to('cuda', non_blocking=True)
+                    repo_name_i = multiple_dataset.repo_ids[ds_i]
+                    img_delta_ts = multiple_dataset.delta_timestamps[repo_name_i]["observation.image"].index(0.0)
+                    act_delta_ts = multiple_dataset.delta_timestamps[repo_name_i]["action"].index(0.0)
 
+                    # 두 시점 이미지를 스택
+                    img_seq = torch.stack([
+                        ds[start]["observation.image"][img_delta_ts],
+                        ds[next_idx]["observation.image"][img_delta_ts],
+                    ])
+                    images.append(img_seq)
+
+                    # 액션 시퀀스 (평균 사용 옵션 유지)
+                    act_seq = ds[start]["action"][act_delta_ts: act_delta_ts + multiple_dataset.window_size - 1]
+                    if multiple_dataset.use_action_avg:
+                        act_seq = torch.mean(act_seq, dim=0)
+                    actions.append(act_seq)
+
+                dynamic_images = torch.stack(images).to('cuda', non_blocking=True)
+                dynamic_actions = torch.stack(actions).to('cuda', non_blocking=True)
+            else:
+                base_action_list = [np.array([1, -1, 1, 0, 0, 0, 1]), np.array([-1, 1, 0, 0, 0, 0, 1]), np.array([1, 0, -1, 0, 0, 0, 0])]
+                # for i in range(len(base_action_list)):
+                #     vec = np.random.uniform(-1, 1, size=7)
+                #     base_action_list[i] = vec
+                print(base_action_list)
+                dynamic_replay_images = []
+                dynamic_data_list = []
+                # Set initial states
+                obs = env.set_init_state(initial_states[episode_idx])
+                print(f"Collecting dynamic dataset ...")
+                log_file.write(f"Collecting dynamic dataset ...\n")
+                t=0
+                while t < cfg.num_steps_wait:
+                    obs, reward, done, info = env.step(get_libero_dummy_action(cfg.model_family))
+                    t += 1
+                chunk_action_size = 4
+                #policy.window_size -1
+                dynamic_image = []
+                dynamic_action = []
+                for index, base_action in enumerate(base_action_list):
+                    img1 = torch.from_numpy(np.flipud(obs["agentview_image"]).copy())
+                    img1 = img1.to(torch.float32) / 255
+                    img1 = img1.permute(2, 0, 1)  # H, W, C -> C, H, W
+                    # Send data tensors from CPU to GPU
+                    img1 = img1.to('cuda', non_blocking=True)
+                    # dynamic_replay_images.append(np.flipud(obs["agentview_image"]).copy())
+
+                    for _ in range(chunk_action_size):
+                        obs, reward, done, info = env.step(np.array(base_action))
+
+                    img2 = torch.from_numpy(np.flipud(obs["agentview_image"]).copy())
+                    img2 = img2.to(torch.float32) / 255
+                    img2 = img2.permute(2, 0, 1)  # H, W, C -> C, H, W
+                    # Send data tensors from CPU to GPU
+                    img2 = img2.to('cuda', non_blocking=True)
+                    # dynamic_replay_images.append(np.flipud(obs["agentview_image"]).copy())
+                    img_seq = torch.stack([img1, img2])
+                    dynamic_image.append(img_seq)
+                    act_seq = torch.tensor(base_action)
+                    dynamic_action.append(act_seq)
+                # save_dynamic_rollout_video(dynamic_replay_images, num=index)
+                dynamic_images = torch.stack(dynamic_image)
+                dynamic_actions = torch.stack(dynamic_action).to('cuda', non_blocking=True)
             env.reset()
             viewpoint_rotate = np.random.uniform(viewpoint_rotate_min, viewpoint_rotate_max)
             color_scale = np.random.uniform(color_scale_min, color_scale_max)
@@ -493,8 +555,8 @@ def eval_libero(cfg: GenerateConfig) -> None:
                         observation = {
                             "observation.state": state,
                             "observation.image": image,
-                            "dynamic.image": dynamic_images,
-                            "dynamic.action": dynamic_actions,
+                            "dynamic.image": dynamic_images.unsqueeze(0),
+                            "dynamic.action": dynamic_actions.unsqueeze(0),
                         }
 
                         with torch.inference_mode():

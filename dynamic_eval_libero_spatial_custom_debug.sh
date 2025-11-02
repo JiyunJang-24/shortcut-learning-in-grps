@@ -5,21 +5,22 @@ source "$CONDA_BASE/etc/profile.d/conda.sh"
 conda activate shortcut-learning
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
 REPO_ROOT="${SCRIPT_DIR}"
+export REPO_ROOT="${SCRIPT_DIR}"
 export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 export PYTHONPATH="${REPO_ROOT}/lerobot:${PYTHONPATH}"
 export PYTHONPATH="${REPO_ROOT}/lerobot/unimatch:${PYTHONPATH}"
-base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/Dynamic_DP_without_aug/15-49-19_Dynamic_DP_ex1_angle_from_0_to_315"
+base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2025-11-01/12-25-11_Dynamic_DP_45_90_275_315_from_frozen_DP_ex1_angle_from_0_135_225"
 checkpoint_dir="${base_ckpt_dir}/checkpoints"
-checkpoint_step="060000"
+checkpoint_step="040000"
 ckpt_path="${checkpoint_dir}/${checkpoint_step}/pretrained_model"
 log_root="./logs-angle-test"
 export MUJOCO_GL=egl
 # angles=(0 22.5 45)
 # tasks=(0 4)       # 0=A, 4=B
 # seeds=(7 8 9)
-angles=(0)
+angles=(45.0)
 tasks=(0)       # 0=A, 4=B
-seeds=(10)
+seeds=(11)
 export PYTHONUNBUFFERED=1
 mkdir -p "${log_root}"
 # 실행
@@ -46,6 +47,8 @@ for seed in "${seeds[@]}"; do
         --specific_task_id "${task}" \
         --local_log_dir "${outdir}" \
         --seed "${seed}" \
+        --use_demo_data_for_dynamic true \
+        --use_demo_data_from_same_task true
 
     done
   done

@@ -5,6 +5,7 @@ source "$CONDA_BASE/etc/profile.d/conda.sh"
 conda activate shortcut-learning
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
 REPO_ROOT="${SCRIPT_DIR}"
+export REPO_ROOT="${SCRIPT_DIR}"
 export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 export PYTHONPATH="${REPO_ROOT}/lerobot:${PYTHONPATH}"
 export PYTHONPATH="${REPO_ROOT}/lerobot/unimatch:${PYTHONPATH}"
@@ -34,7 +35,7 @@ for seed in "${seeds[@]}"; do
         --model_family diffusion \
         --pretrained_checkpoint "${ckpt_path}" \
         --task_suite_name libero_spatial \
-        --prefix "angle_${angle}_task_${task}_seed_${seed}_$(basename "$base_ckpt_dir")_${checkpoint_step}" \
+        --prefix "angle_${angle}_task_${task}_seed_${seed}_dynamic_from_demo_$(basename "$base_ckpt_dir")_${checkpoint_step}" \
         --num_trials_per_task 25 \
         --num_tasks_in_suite 1 \
         --use_wandb true \
@@ -48,6 +49,8 @@ for seed in "${seeds[@]}"; do
         --specific_task_id "${task}" \
         --local_log_dir "${outdir}" \
         --seed "${seed}" \
+        --use_demo_data_for_dynamic true \
+        --use_demo_data_from_same_task false
 
     done
   done
