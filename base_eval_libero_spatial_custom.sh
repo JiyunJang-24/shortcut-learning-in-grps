@@ -7,13 +7,13 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -
 REPO_ROOT="${SCRIPT_DIR}"
 export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 
-base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2025-11-01/21-36-43_DP_ex1_angle_from_0"
+base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2025-11-04/19-16-26_DP_ex1_angle_from_0_45_315_use_language"
 checkpoint_dir="${base_ckpt_dir}/checkpoints"
 checkpoint_step="030000"
 ckpt_path="${checkpoint_dir}/${checkpoint_step}/pretrained_model"
 log_root="./logs-angle-test"
 export MUJOCO_GL=egl
-angles=(0)
+angles=(0 45 315 22.5)
 tasks=(0 4)       # 0=A, 4=B
 seeds=(7 8 9)
 # angles=(0)
@@ -22,9 +22,9 @@ seeds=(7 8 9)
 export PYTHONUNBUFFERED=1
 mkdir -p "${log_root}"
 # 실행
-for angle in "${angles[@]}"; do
+for seed in "${seeds[@]}"; do
   for task in "${tasks[@]}"; do
-    for seed in "${seeds[@]}"; do
+    for angle in "${angles[@]}"; do
       outdir="${log_root}/seed_${seed}/task_${task}/angle_${angle}"
       mkdir -p "$outdir"
       python -u experiments/robot/libero/run_libero_eval_dp_minivla.py \

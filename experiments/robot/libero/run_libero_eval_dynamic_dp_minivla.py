@@ -557,6 +557,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                             "observation.image": image,
                             "dynamic.image": dynamic_images.unsqueeze(0),
                             "dynamic.action": dynamic_actions.unsqueeze(0),
+                            "task": task_description
                         }
 
                         with torch.inference_mode():

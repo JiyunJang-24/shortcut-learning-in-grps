@@ -430,6 +430,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                         observation = {
                             "observation.state": state,
                             "observation.image": image,
+                            "task": task_description
                         }
 
                         with torch.inference_mode():

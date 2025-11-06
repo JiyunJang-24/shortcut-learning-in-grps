@@ -9,9 +9,9 @@ export REPO_ROOT="${SCRIPT_DIR}"
 export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 export PYTHONPATH="${REPO_ROOT}/lerobot:${PYTHONPATH}"
 export PYTHONPATH="${REPO_ROOT}/lerobot/unimatch:${PYTHONPATH}"
-base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2025-11-01/12-25-11_Dynamic_DP_45_90_275_315_from_frozen_DP_ex1_angle_from_0_135_225"
+base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2025-11-03/05-44-50_Dynamic_DP_ex1_angle_from_0_to_315_unimatch_common_feature"
 checkpoint_dir="${base_ckpt_dir}/checkpoints"
-checkpoint_step="040000"
+checkpoint_step="090000"
 ckpt_path="${checkpoint_dir}/${checkpoint_step}/pretrained_model"
 log_root="./logs-angle-test"
 export MUJOCO_GL=egl
@@ -47,7 +47,7 @@ for seed in "${seeds[@]}"; do
         --specific_task_id "${task}" \
         --local_log_dir "${outdir}" \
         --seed "${seed}" \
-        --use_demo_data_for_dynamic true \
+        --use_demo_data_for_dynamic false \
         --use_demo_data_from_same_task true
 
     done
