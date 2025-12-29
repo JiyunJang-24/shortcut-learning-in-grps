@@ -3,33 +3,37 @@
 unset CUDA_VISIBLE_DEVICES
 CONDA_BASE=$(conda info --base)
 source "$CONDA_BASE/etc/profile.d/conda.sh"
+
+REPO_ROOT="/data1/local/shortcut-learning-in-grps"
 conda activate shortcut-learning
+export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 
 CUR_PATH=$(pwd)
 
 libero_task_suite="libero_spatial"
-libero_raw_data_dir="/root/Desktop/workspace/shortcut-learning-in-grps/dataset_git/libero_spatial"
+libero_raw_data_dir="${REPO_ROOT}/dataset_git/libero_spatial"
 libero_base_save_dir="${libero_raw_data_dir}_no_noops_island"
 
 # viewpoint_rotate_lower_bound=15.0
 # viewpoint_rotate_upper_bound=65.0
-viewpoint_rotate=(22.0)
+viewpoint_rotate=(22.5)
 vmin=1.00
 vmax=1.00
 num_tasks_in_suite=1
 specify_task_id=0
 number_demo_per_task=1
 demo_repeat_times=1
+username="cam_info"
 for i in "${viewpoint_rotate[@]}"; do
     viewpoint_rotate_lower_bound=$i
     viewpoint_rotate_upper_bound=$i
 
     if [ 1 -eq 1 ]; then
-        python experiments/robot/libero/regenerate_libero_hdf5_lerobot_dataset_repeat_split.py \
+        python experiments/robot/libero/regenerate_libero_hdf5_lerobot_dataset_repeat_split_with_cam_info.py \
             --libero_task_suite $libero_task_suite \
             --libero_raw_data_dir $libero_raw_data_dir \
             --libero_base_save_dir $libero_base_save_dir \
-            --need_hdf5 True --show_diff True --user_name xyg \
+            --need_hdf5 True --show_diff True --user_name $username \
             --viewpoint_rotate_lower_bound $viewpoint_rotate_lower_bound \
             --viewpoint_rotate_upper_bound $viewpoint_rotate_upper_bound \
             --vmin $vmin --vmax $vmax --need_color_change False \
@@ -37,7 +41,7 @@ for i in "${viewpoint_rotate[@]}"; do
             --demo_repeat_times $demo_repeat_times --change_light False
     fi
 
-    cd "${CUR_PATH}/dataset_git/rlds_dataset_builder/LIBERO_Spatial_XYG"
+    cd "${CUR_PATH}/dataset_git/rlds_dataset_builder/LIBERO_Spatial_XYG_extrinsic"
 
     export NO_GCE_CHECK="true"
     export CUDA_VISIBLE_DEVICES=""
@@ -52,7 +56,7 @@ for i in "${viewpoint_rotate[@]}"; do
         hdf5_dir="${libero_base_save_dir}_full_hdf5"
         rlds_dir="${libero_base_save_dir}_full_rlds"
     fi
-    user_name="xyg_$(echo ${number_demo_per_task} | awk '{printf "%02d\n", $1}')_$(echo ${demo_repeat_times} | awk '{printf "%02d\n", $1}')_$(echo $viewpoint_rotate_lower_bound | awk '{printf "%.1f\n", $1}')_$(echo $viewpoint_rotate_upper_bound | awk '{printf "%.1f\n", $1}')"
+    user_name="${username}_$(echo ${number_demo_per_task} | awk '{printf "%02d\n", $1}')_$(echo ${demo_repeat_times} | awk '{printf "%02d\n", $1}')_$(echo $viewpoint_rotate_lower_bound | awk '{printf "%.1f\n", $1}')_$(echo $viewpoint_rotate_upper_bound | awk '{printf "%.1f\n", $1}')"
 
     if [[ $num_tasks_in_suite -eq 1 ]]; then
         viewpoint_path="v-$(echo $vmin | awk '{printf "%.3f\n", $1}')-$(echo $vmax | awk '{printf "%.3f\n", $1}')_num$(($specify_task_id+1))"

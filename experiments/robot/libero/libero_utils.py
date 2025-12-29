@@ -134,3 +134,21 @@ def quat2axisangle(quat):
         return np.zeros(3)
 
     return (quat[:3] * 2.0 * math.acos(quat[3])) / den
+
+def _get_camera_intrinsics(env, cam_name, image_size):
+        cam_name = "agentview"  # assume same intrinsics
+        cam_id = self.env.sim.model.camera_name2id(cam_name)
+
+        fovy = self.env.sim.model.cam_fovy[cam_id] * np.pi / 180.0
+        width, height = self.image_size, self.image_size
+
+        focal_length = height / (2 * np.tan(fovy / 2))
+
+        intrinsics = np.array([
+            [focal_length, 0, width / 2],
+            [0, focal_length, height / 2],
+            [0, 0, 1]
+        ], dtype=np.float32)
+
+        return intrinsics
+
