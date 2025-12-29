@@ -9,9 +9,9 @@ export REPO_ROOT="${SCRIPT_DIR}"
 export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 export PYTHONPATH="${REPO_ROOT}/lerobot:${PYTHONPATH}"
 export PYTHONPATH="${REPO_ROOT}/lerobot/unimatch:${PYTHONPATH}"
-base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2025-11-04/19-19-25_Dynamic_DP_ex1_angle_from_0_45_315_use_language"
+base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2025-11-12/14-51-48_Dynamic_DP_ex1_angle_from_0_45_315_use_language_frozen_dynamic_backbone_trained_classification"
 checkpoint_dir="${base_ckpt_dir}/checkpoints"
-checkpoint_step="090000"
+checkpoint_step="050000"
 ckpt_path="${checkpoint_dir}/${checkpoint_step}/pretrained_model"
 log_root="./logs-angle-test"
 export MUJOCO_GL=egl
@@ -51,6 +51,8 @@ for seed in "${seeds[@]}"; do
         --seed "${seed}" \
         --use_demo_data_for_dynamic false \
         --use_demo_data_from_same_task false
+        # --policy.load_pretrained_dynamic_model_path=/data1/local/shortcut-learning-in-grps/lerobot/outputs/train/2025-11-11/18-01-02_pretrain_dynamic_backbone_angle_from_0_to_315_contrastive/checkpoints/005000/checkpoint.pt \
+
 
     done
   done
