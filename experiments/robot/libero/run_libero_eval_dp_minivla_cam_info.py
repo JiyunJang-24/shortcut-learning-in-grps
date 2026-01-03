@@ -447,8 +447,8 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                 extrinsic_tensor = plucker_extrinsic_matrix.unsqueeze(0)
                                 plucker_data = plucker_embedder(intrinsic_tensor, extrinsic_tensor)
                                 plucker_tensor = einops.rearrange(plucker_data['plucker'], 's h w c -> s c h w').to('cuda', non_blocking=True)
-                            image = torch.cat([image, plucker_tensor])
-                             
+                            image = torch.cat([image, plucker_tensor], dim=1)
+                            
                         elif cfg.use_dynamics_basis:
                             with torch.no_grad():
                                 motion_dynamics_basis = _get_motion_dynamics_basis(intrinsic_matrix, cam_to_world=plucker_extrinsic_matrix).reshape(-1)
