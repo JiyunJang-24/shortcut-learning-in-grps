@@ -133,7 +133,6 @@ def rotate_camera_based_on_robot_base(cur_camera_pos, cur_camera_quat, robot_bas
 def rotate_camera(env, camera_id, camera_name, robot_base_name="robot0_base", theta=0.0, debug=False):
     cur_camera_pos = env.sim.model.cam_pos[camera_id].copy()
     cur_camera_quat = env.sim.model.cam_quat[camera_id].copy()
-    
     robot_base_id = env.sim.model.body_name2id(robot_base_name)
     robot_base_pos = env.sim.model.body_pos[robot_base_id].copy()
     robot_base_quat = env.sim.model.body_quat[robot_base_id].copy()
@@ -163,6 +162,40 @@ def rotate_camera(env, camera_id, camera_name, robot_base_name="robot0_base", th
         
         Image.fromarray(camera_img[::-1]).save(os.path.join(IMAGE_SAVE_PATH, f"rotate_{theta:.2f}.png"))
     return env
+
+
+def rotate_camera_ur5e(env, ur5e_env, camera_id, camera_name, robot_base_name="robot0_base", theta=0.0, debug=False):
+    cur_camera_pos = env.sim.model.cam_pos[camera_id].copy()
+    cur_camera_quat = env.sim.model.cam_quat[camera_id].copy()
+    robot_base_id = env.sim.model.body_name2id(robot_base_name)
+    robot_base_pos = env.sim.model.body_pos[robot_base_id].copy()
+    robot_base_quat = env.sim.model.body_quat[robot_base_id].copy()
+    
+    if not MUJOCO_WXYZ: # xyzw -> wxyz
+        cur_camera_quat = np.array([cur_camera_quat[3], cur_camera_quat[0], cur_camera_quat[1], cur_camera_quat[2]])
+        robot_base_quat = np.array([robot_base_quat[3], robot_base_quat[0], robot_base_quat[1], robot_base_quat[2]])
+    
+    tgt_camera_pos, tgt_camera_quat = rotate_camera_based_on_robot_base(cur_camera_pos, cur_camera_quat, 
+                                                                        robot_base_pos, robot_base_quat, theta)
+    
+    if not MUJOCO_WXYZ: # wxyz -> xyzw
+        tgt_camera_quat = np.array([tgt_camera_quat[1], tgt_camera_quat[2], tgt_camera_quat[3], tgt_camera_quat[0]])
+    
+    ur5e_env.sim.model.cam_pos[camera_id] = tgt_camera_pos
+    ur5e_env.sim.model.cam_quat[camera_id] = tgt_camera_quat
+    ur5e_env.sim.forward()
+    
+    if debug:
+        camera_img = ur5e_env.sim.render(
+            camera_name=camera_name,  # 指定相机名称
+            width=IMAGE_RESOLUTION,                  # 图像宽度
+            height=IMAGE_RESOLUTION,                 # 图像高度
+            depth=False,                # 是否需要深度图
+            mode='offscreen'            # 离屏渲染模式
+        )
+        
+        Image.fromarray(camera_img[::-1]).save(os.path.join(IMAGE_SAVE_PATH, f"rotate_{theta:.2f}.png"))
+    return ur5e_env
 
 
 def color_interpolation(color_a, color_b, alpha):
