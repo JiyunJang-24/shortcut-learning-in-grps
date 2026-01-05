@@ -183,6 +183,7 @@ tmp_dir*/
 xyg-plot/
 lerobot/
 dataset_git/libero_*/
+dataset_git/yujin/
 logs-angle-test/
 cam_info_*/
 eef_*/
