@@ -156,6 +156,7 @@ class Exp_Qwen25_DinoSigLIP_224px_0_5B_LIBERO_90(Exp_Qwen25_DinoSigLIP_224px_0_5
     per_device_batch_size: int = 32
 
 
+
 @dataclass
 class Exp_Qwen25_DinoSigLIP_224px_T2_0_5B_LIBERO_90(Exp_Qwen25_DinoSigLIP_224px_0_5B_LIBERO_90):
     vla_id: str = "prism-qwen25-dinosiglip-224px-t2+0_5b+mx-libero-90"
@@ -170,7 +171,6 @@ class Exp_Qwen25_DinoSigLIP_224px_wrist_0_5B_LIBERO_90(Exp_Qwen25_DinoSigLIP_224
 
 
 ## bridge Qwen
-
 
 @dataclass
 class Exp_Qwen25_DinoSigLIP_224px_0_5B_Bridge(Exp_SigLIP_224px_Bridge):
@@ -194,6 +194,7 @@ class Exp_DinoSigLIP_224px_LIBERO_90(Exp_DinoSigLIP_224px_Bridge):
     expected_world_size: int = 8
     global_batch_size: int = 256
     per_device_batch_size: int = 32
+
 
 
 # = [64 GPU] DINO-SigLIP 224px + OXE Magic Soup++ =
@@ -273,6 +274,23 @@ class Exp_SigLIP_224px_Droid_Wipe(Exp_SigLIP_224px_Bridge):
     data_mix: str = "droid_wipe"
 
 
+
+
+# === Qwen2.5 0.5B SigLIP 224px & **Plucker** ===
+@dataclass
+class Exp_Qwen25_DinoSigLIP_Plucker_224px_0_5B_LIBERO_SPATIAL(Exp_SigLIP_224px_Bridge):
+    vla_id: str = "prism-qwen25-dinosiglip-plucker-224px+0_5b+mx-libero-spatial"
+    base_vlm: Union[str, Path] = "prism-qwen25-extra-dinosiglip-plucker-224px+0_5b"
+    action_tokenizer: str = "extra_action_tokenizer"
+
+    data_mix: str = "libero_spatial"
+
+    expected_world_size: int = 1
+    global_batch_size: int = 16
+    per_device_batch_size: int = 16
+
+
+
 # === Define a VLA Registry Enum for Reference & Validation ===
 @unique
 class VLARegistry(Enum):
@@ -297,6 +315,8 @@ class VLARegistry(Enum):
     QWEN25_DINOSIGLIP_224PX_WRIST_0_5B_LIBERO_90 = Exp_Qwen25_DinoSigLIP_224px_wrist_0_5B_LIBERO_90
 
     QWEN25_DINOSIGLIP_224PX_0_5B_BRIDGE = Exp_Qwen25_DinoSigLIP_224px_0_5B_Bridge
+
+    QWEN25_DINOSIGLIP_PLUCKER_224PX_0_5B_LIBERO_SPATIAL = Exp_Qwen25_DinoSigLIP_Plucker_224px_0_5B_LIBERO_SPATIAL
 
     # === TDROID Fine-tuning Configs ===
     SIGLIP_224PX_MX_TDROID_CARROT_IN_BOWL = Exp_SigLIP_224px_TDROID_CarrotInBowl

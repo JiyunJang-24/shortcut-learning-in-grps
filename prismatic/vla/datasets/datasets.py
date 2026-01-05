@@ -7,6 +7,7 @@ format to OpenVLA, IterableDataset shim.
 
 from dataclasses import dataclass
 from pathlib import Path
+import os
 from typing import Any, Dict, Tuple, Type
 
 import numpy as np
@@ -124,6 +125,13 @@ class RLDSDataset(IterableDataset):
         # Configure RLDS Dataset(s)
         if self.data_mix in OXE_NAMED_MIXTURES:
             mixture_spec = OXE_NAMED_MIXTURES[self.data_mix]
+        # Enable loading datasets from specified directory without creating mixture
+        elif (self.data_root_dir / self.data_mix).is_dir():
+            print(f"Loading datasets from directory {self.data_mix}")
+            mixture_spec = []
+            for path in sorted(Path(self.data_root_dir / self.data_mix).iterdir()):
+                if path.is_dir():
+                    mixture_spec.append((str(path.relative_to(self.data_root_dir)), 1.0))
         else:
             # Assume that passed "mixture" name is actually a single dataset -- create single-dataset "mix"
             mixture_spec = [(self.data_mix, 1.0)]

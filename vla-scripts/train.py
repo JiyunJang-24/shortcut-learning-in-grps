@@ -55,7 +55,7 @@ class TrainConfig:
     vla: VLAConfig = field(
         default_factory=VLAConfig.get_choice_class(VLARegistry.DINOSIGLIP_224PX_MX_OXE_MAGIC_SOUP_PLUS.vla_id)
     )
-    
+
     # Directory Paths
     data_root_dir: Path = Path(                                     # Path to Open-X dataset directory
         "datasets/open-x-embodiment"
@@ -88,9 +88,9 @@ class TrainConfig:
         """Lift optimization parameters from `self.vla` for ease of use =>> validate on `expected_world_size`"""
         # xyg added
         # self.vla.expected_world_size = 1    # expected 8
-        # self.vla.global_batch_size = 1      # expected 256 
+        # self.vla.global_batch_size = 1      # expected 256
         # self.vla.per_device_batch_size = 1  # expected 32
-        
+
         self.epochs = self.vla.epochs
         self.max_steps = self.vla.max_steps
         self.global_batch_size = self.vla.global_batch_size
@@ -141,7 +141,7 @@ def train(cfg: TrainConfig) -> None:
     from datetime import datetime
     current_time = datetime.now()
     cfg.run_root_dir = os.path.join(
-        "./logs", f"{current_time.year}-{current_time.month}-{current_time.day}", 
+        "./logs", f"{current_time.year}-{current_time.month}-{current_time.day}",
         f"{current_time.hour}-{current_time.minute}-{current_time.second}_{cfg.run_root_dir}"
     )
     cfg.run_root_dir = Path(cfg.run_root_dir)
@@ -174,7 +174,7 @@ def train(cfg: TrainConfig) -> None:
         vlm = load_vla(
             cfg.pretrained_checkpoint,
             hf_token=hf_token,
-            load_for_training=True,
+            load_for_training=False,
             image_sequence_len=cfg.image_sequence_len,
         )
 
@@ -236,7 +236,7 @@ def train(cfg: TrainConfig) -> None:
     # Save dataset statistics for de-normalization at inference time
     if overwatch.is_rank_zero():
         save_dataset_statistics(vla_dataset.dataset_statistics, run_dir)
-        
+
     # Create Train Strategy
     overwatch.info(f"Initializing Train Strategy `{cfg.train_strategy}`")
     train_strategy = get_train_strategy(

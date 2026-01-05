@@ -20,6 +20,7 @@ from prismatic.models.backbones.vision import (
     IN1KViTBackbone,
     SigLIPViTBackbone,
     VisionBackbone,
+    DinoSigLIPPluckerViTBackbone
 )
 from prismatic.models.vlms import PrismaticVLM
 
@@ -48,6 +49,9 @@ VISION_BACKBONES = {
     # === Fused Backbones ===
     "dinoclip-vit-l-336px": {"cls": DinoCLIPViTBackbone, "kwargs": {"default_image_size": 336}},
     "dinosiglip-vit-so-384px": {"cls": DinoSigLIPViTBackbone, "kwargs": {"default_image_size": 384}},
+
+    # === Backbones with Plucker Embeddings ===
+    "dinosiglip-plucker-vit-so-224px": {"cls": DinoSigLIPPluckerViTBackbone, "kwargs": {"default_image_size": 224}}
 }
 
 
