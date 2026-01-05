@@ -26,6 +26,17 @@ def get_libero_env(task, model_family, resolution=256):
     env.seed(0)  # IMPORTANT: seed seems to affect object positions even when using fixed initial state
     return env, task_description
 
+def get_libero_env_multi_embodiment(task, model_family, resolution=256, **kwargs):
+    """Initializes and returns the LIBERO environment, along with the task description."""
+    task_description = task.language
+    task_bddl_file = os.path.join(get_libero_path("bddl_files"), task.problem_folder, task.bddl_file)
+    env_args = {"bddl_file_name": task_bddl_file, "camera_heights": resolution, "camera_widths": resolution}
+    env_args.update(kwargs)
+    print(os.getenv("CUDA_VISIBLE_DEVICES"), os.getenv("MUJOCO_GL"), os.getenv("MUJOCO_EGL_DEVICE_ID"))
+    
+    env = OffScreenRenderEnv(**env_args)
+    env.seed(0)  # IMPORTANT: seed seems to affect object positions even when using fixed initial state
+    return env, task_description
 
 def get_libero_dummy_action(model_family: str):
     """Get dummy/no-op action, used to roll out the simulation while the robot does nothing."""

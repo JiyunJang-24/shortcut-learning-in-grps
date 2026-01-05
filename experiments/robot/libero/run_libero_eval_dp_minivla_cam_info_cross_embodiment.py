@@ -38,14 +38,14 @@ def get_free_gpu_indices(num_gpus=1, debug=False):
         gpu_bus_ids.append([l.strip().split()[1] for l in out[i*5:i*5+1]][0])
         total_gpu_memory.append(int([l.strip().split(':')[-1].strip().split(' ')[0].strip() for l in out[i*5+2:i*5+3]][0]))
         reserved_gpu_memory.append(int([l.strip().split(':')[-1].strip().split(' ')[0].strip() for l in out[i*5+3:i*5+4]][0]))
-        used_gpu_memory.append(int([l.strip().split(':')[-1].strip().split(' ')[0].strip() for l in out[i*5+4:i*5+5]][0]))
-
+        used_gpu_memory.append(int([l.strip().split(':')[-1].strip().split(' ')[0].strip() for l in out[i*5+4:i*5+5]][0]))  
+        
     remaining_gpu_memory = [total_gpu_memory[i] - used_gpu_memory[i] - reserved_gpu_memory[i] for i in range(total_gpu_num)]
     for i in range(total_gpu_num):
         tmp_memory = used_gpu_memory[i]+reserved_gpu_memory[i]
         if debug:
             print(f"GPU {i} {tmp_memory}/{total_gpu_memory[i]}")
-
+        
     # 选择剩余显存最大的num_gpus个GPU
     sorted_gpu_indices = sorted(range(total_gpu_num), key=lambda i: remaining_gpu_memory[i], reverse=True)
     return sorted_gpu_indices[:num_gpus]
@@ -91,6 +91,7 @@ from experiments.robot.libero.libero_utils import (
     quat2axisangle,
     save_rollout_video,
     save_rollout_video_dir,
+    get_libero_env_multi_embodiment
 )
 from experiments.robot.openvla_utils import get_processor
 from experiments.robot.robot_utils import (
@@ -103,6 +104,12 @@ from experiments.robot.robot_utils import (
     set_seed_everywhere,
 )
 import sys
+
+from experiments.robot.libero.libero_ur5_utils import (
+    convert_franka_flat_to_ur5e_flat,
+    compare_eef_pos,
+)
+
 if os.getcwd() not in sys.path:
     sys.path.append(os.getcwd())
 import LIBERO.xyg_scripts.rotate_recolor_dataset as rotate_recolor_dataset
@@ -133,11 +140,11 @@ class GenerateConfig:
     # Model-specific parameters
     #################################################################################################################
     model_family: str = "diffusion"                    # Model family
-    hf_token: str = Path(".hf_token")
+    hf_token: str = Path(".hf_token")                     
     # Pretrained checkpoint path
     pretrained_checkpoint: Union[str, Path] = "/mnt/hdd3/xingyouguang/projects/robotics/lerobot/outputs/train/2025-03-26/21-24-06_diffusion/checkpoints/030000/pretrained_model"
-
-
+    
+    
     # no use for next 5 lines
     load_in_8bit: bool = False                       # (For OpenVLA only) Load with 8-bit quantization
     load_in_4bit: bool = False                       # (For OpenVLA only) Load with 4-bit quantization
@@ -153,12 +160,12 @@ class GenerateConfig:
     num_steps_wait: int = 10                         # Number of steps to wait for objects to stabilize in sim
     num_trials_per_task: int = 10                    # Number of rollouts per task 50
     num_tasks_in_suite: int = 10
-
+    
     viewpoint_rotate_min_interpolate_weight: float = 0.25
     viewpoint_rotate_max_interpolate_weight: float = 0.25
     color_scale_min_interpolate_weight: float = 0.25
     color_scale_max_interpolate_weight: float = 0.25
-
+    
     viewpoint_rotate_upper_bound: float = 90.0
     viewpoint_rotate_lower_bound: float = -10.0
     need_color_change: bool = True
@@ -184,23 +191,26 @@ class GenerateConfig:
     re_eval: bool = False
     change_light: bool = False
     base_num: float = 0.05
-
+    
     specific_task_id: int = None
     use_plucker: bool = False
     use_dynamics_basis: bool = False
+    robot: str = "Panda"
+    gripper_type: str = "default"
+
 
 def check_eval_finish(local_log_filepath):
     base_path = os.path.dirname(local_log_filepath)
     all_txt_files = glob.glob(os.path.join(base_path, "*.txt"))
-
+    
     skip_len = len(f"{DATE_TIME}.txt")
-
+    
     similar_txt_files = [f_path for f_path in all_txt_files if f_path[:-skip_len] == local_log_filepath[:-skip_len]]
     if len(similar_txt_files) == 0:
         return False, local_log_filepath
-
+    
     assert len(similar_txt_files) == 1, f"Found {len(similar_txt_files)} similar txt files, expected 1"
-
+    
     # 有现成的 log file，就不要换来换去了
     similar_txt_file = similar_txt_files[0]
     with open(similar_txt_file, "r") as f:
@@ -218,14 +228,14 @@ def eval_libero(cfg: GenerateConfig) -> None:
 
     # Set random seed
     set_seed_everywhere(cfg.seed)
-
+    
     # Initialize local logging
     run_id = f"{cfg.prefix}EVAL-{cfg.task_suite_name}-{cfg.model_family}-{DATE_TIME}"
     if cfg.run_id_note is not None:
         run_id += f"--{cfg.run_id_note}"
     os.makedirs(cfg.local_log_dir, exist_ok=True)
     local_log_filepath = os.path.join(cfg.local_log_dir, run_id + ".txt")
-
+    
     already_check_flag, ori_log_path = check_eval_finish(local_log_filepath)
     if already_check_flag and not cfg.re_eval:
         print('#' * 40)
@@ -250,13 +260,13 @@ def eval_libero(cfg: GenerateConfig) -> None:
         from lerobot.common.policies.diffusion.modeling_diffusion import DiffusionPolicy
         pretrained_policy_path = cfg.pretrained_checkpoint
         stats_path = pretrained_policy_path+"/stats.json"
-
+        
         with open(stats_path, "r", encoding="utf-8") as f:
             stats_raw = json.load(f)
 
         dataset_stats = _json_to_tensors(stats_raw)
         policy = DiffusionPolicy.from_pretrained(pretrained_policy_path, dataset_stats=dataset_stats, evaluation=True)
-        # try:
+        # try: 
         #     dataset_aug_stats = dataset_stats['aug_stats']
         #     policy = DiffusionPolicy.from_pretrained(pretrained_policy_path, dataset_stats=dataset_stats, dataset_aug_stats=dataset_aug_stats)
         # except:
@@ -264,7 +274,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
     else:
         policy = get_model(cfg)
         model = policy
-
+    
     # [OpenVLA] Check that the model contains the action un-normalization key
     if cfg.model_family in ["openvla", "prismatic"]:
         # In some cases, the key must be manually modified (e.g. after training on a modified version of the dataset
@@ -275,15 +285,15 @@ def eval_libero(cfg: GenerateConfig) -> None:
             if cfg.unnorm_key not in model.norm_stats and f"{cfg.unnorm_key}_no_noops" in model.norm_stats:
                 cfg.unnorm_key = f"{cfg.unnorm_key}_no_noops"
             assert cfg.unnorm_key in model.norm_stats, f"Action un-norm key {cfg.unnorm_key} not found in VLA `norm_stats`!"
-
+        
     # [OpenVLA] Get Hugging Face processor
     processor = None
     if cfg.model_family == "openvla":
         processor = get_processor(cfg)
-
+        
     log_file = open(local_log_filepath, "w", buffering=1)  # Enable line buffering
     print(f"Logging to local log file: {local_log_filepath}")
-
+    
     # 将 cfg 中的参数写入 log_file, 包括 cfg 的每个属性
     for attr, value in cfg.__dict__.items():
         log_file.write(f"{attr}: {value}\n")
@@ -315,22 +325,22 @@ def eval_libero(cfg: GenerateConfig) -> None:
     color_light_b = np.array(cfg.color_light_b)
     color_scale_upper_bound = cfg.color_scale_upper_bound
     color_scale_lower_bound = cfg.color_scale_lower_bound
-
+    
     viewpoint_rotate_min_interpolate_weight = cfg.viewpoint_rotate_min_interpolate_weight
     viewpoint_rotate_max_interpolate_weight = cfg.viewpoint_rotate_max_interpolate_weight
     color_scale_min_interpolate_weight = cfg.color_scale_min_interpolate_weight
     color_scale_max_interpolate_weight = cfg.color_scale_max_interpolate_weight
-
+    
     change_light = cfg.change_light
     base_num = cfg.base_num
-
+    
     viewpoint_rotate_min = interpolate_number(viewpoint_rotate_lower_bound, viewpoint_rotate_upper_bound, viewpoint_rotate_min_interpolate_weight)
     viewpoint_rotate_max = interpolate_number(viewpoint_rotate_lower_bound, viewpoint_rotate_upper_bound, viewpoint_rotate_max_interpolate_weight)
     color_scale_min = interpolate_number(color_scale_lower_bound, color_scale_upper_bound, color_scale_min_interpolate_weight)
     color_scale_max = interpolate_number(color_scale_lower_bound, color_scale_upper_bound, color_scale_max_interpolate_weight)
     print(f"v: {viewpoint_rotate_min_interpolate_weight}->{viewpoint_rotate_min}, {viewpoint_rotate_max_interpolate_weight}->{viewpoint_rotate_max}, "
           f"c: {color_scale_min_interpolate_weight}->{color_scale_min}, {color_scale_max_interpolate_weight}->{color_scale_max}")
-
+    
     # Initialize LIBERO task suite
     benchmark_dict = benchmark.get_benchmark_dict()
     task_suite = benchmark_dict[cfg.task_suite_name]()
@@ -352,7 +362,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
         task_ids = [cfg.specific_task_id]
     else:
         task_ids = list(range(num_tasks_in_suite))
-
+        
     for task_id in tqdm.tqdm(task_ids):
         # Get task
         task = task_suite.get_task(task_id)
@@ -361,8 +371,12 @@ def eval_libero(cfg: GenerateConfig) -> None:
         initial_states = task_suite.get_task_init_states(task_id)
 
         # Initialize LIBERO environment and task description
-        env, task_description = get_libero_env(task, cfg.model_family, resolution=resize_size)
-
+        # env, task_description = get_libero_env(task, cfg.model_family, resolution=resize_size)
+        env_kwargs = {}
+        env_kwargs['robots'] = [cfg.robot]
+        env_kwargs['gripper_types'] = [cfg.gripper_type]            
+        env, task_description = get_libero_env_multi_embodiment(task, cfg.model_family, resolution=resize_size, **env_kwargs)
+        franka_env, task_description = get_libero_env(task, cfg.model_family, resolution=resize_size)
         # Start episodes
         task_episodes, task_successes = 0, 0
         for episode_idx in tqdm.tqdm(range(cfg.num_trials_per_task)):
@@ -371,27 +385,36 @@ def eval_libero(cfg: GenerateConfig) -> None:
 
             # Reset environment
             env.reset()
+            franka_env.reset()
             if cfg.model_family == "diffusion":
                 policy.reset()
 
+            franka_obs = franka_env.set_init_state(initial_states[episode_idx])
+            ur5_init_state = convert_franka_flat_to_ur5e_flat(franka_env, env, initial_states[episode_idx])
+            obs = env.set_init_state(ur5_init_state)
+            compare_eef_pos(franka_env, env)
+
             viewpoint_rotate = np.random.uniform(viewpoint_rotate_min, viewpoint_rotate_max)
             color_scale = np.random.uniform(color_scale_min, color_scale_max)
-
+            
             # recolor and rotate scene
             camera_id = env.sim.model.camera_name2id(camera_name)
             if need_color_change:
-                env = rotate_recolor_dataset.recolor_and_rotate_scene(env, alpha=color_scale, color_light_a=color_light_a, color_light_b=color_light_b,
-                                                                     camera_id=camera_id, camera_name=camera_name, robot_base_name=robot_base_name,
+                env = rotate_recolor_dataset.recolor_and_rotate_scene(env, alpha=color_scale, color_light_a=color_light_a, color_light_b=color_light_b, 
+                                                                     camera_id=camera_id, camera_name=camera_name, robot_base_name=robot_base_name, 
                                                                      theta=viewpoint_rotate, debug=False, need_change_light=change_light, base_num=base_num)
             else:
-                env = rotate_recolor_dataset.rotate_camera(env=env, camera_id=camera_id, camera_name=camera_name,
+                if cfg.robot != "Panda":
+                    env = rotate_recolor_dataset.rotate_camera_ur5e(env=franka_env, ur5e_env=env, camera_id=camera_id, camera_name=camera_name, 
+                                                            robot_base_name=robot_base_name, theta=viewpoint_rotate, debug=False)
+                else:
+                    env = rotate_recolor_dataset.rotate_camera(env=env, camera_id=camera_id, camera_name=camera_name, 
                                                            robot_base_name=robot_base_name, theta=viewpoint_rotate, debug=False)
-
+            
             # change the transparency of the transparent object
             env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
-
+            
             # Set initial states
-            obs = env.set_init_state(initial_states[episode_idx])
             height, width, channel = obs["agentview_image"].shape
             intrinsic_matrix = torch.from_numpy(CU.get_camera_intrinsic_matrix(env.sim, camera_name, height, width)).float()
             extrinsic_matrix = torch.from_numpy(CU.get_camera_extrinsic_matrix(env.sim, camera_name)).float()
@@ -423,7 +446,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                         obs, reward, done, info = env.step(get_libero_dummy_action(cfg.model_family))
                         t += 1
                         continue
-
+                    
                     if cfg.model_family == "diffusion":
                         # Get preprocessed image, 这里image已经是flip了，他和咱们训练的 xyg/v-0.xx-0.xx-0.xx-0.xx-flip 一致
                         replay_images.append(np.flipud(obs["agentview_image"]).copy())
@@ -446,7 +469,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                 plucker_data = plucker_embedder(intrinsic_tensor, extrinsic_tensor)
                                 plucker_tensor = einops.rearrange(plucker_data['plucker'], 's h w c -> s c h w').to('cuda', non_blocking=True)
                             image = torch.cat([image, plucker_tensor], dim=1)
-
+                             
                         elif cfg.use_dynamics_basis:
                             with torch.no_grad():
                                 motion_dynamics_basis = _get_motion_dynamics_basis(intrinsic_matrix, cam_to_world=plucker_extrinsic_matrix).reshape(-1)
@@ -459,7 +482,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                     origin_robot=True,
                                     origin_fallback="pp",
                                     arrow_len=60,
-                                    return_overlay=True,
+                                    return_overlay=False,
                                 ) # (B, 3, H, W)
                                 # save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
                                 # save_rgb_image(image[0].to('cpu'), "eef_overlay_out/origin_img.png")
@@ -536,7 +559,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                         obs, reward, done, info = env.step(action.tolist())
                     else:
                         raise ValueError("123, 123")
-
+                    
                     if done:
                         task_successes += 1
                         total_successes += 1
@@ -591,7 +614,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
     elapsed_time = end_time - start_time
     hours = elapsed_time // 3600
     minutes = (elapsed_time % 3600) // 60
-    seconds = elapsed_time % 60
+    seconds = elapsed_time % 60 
     print(f"Total time taken: {hours} hours, {minutes} minutes, {seconds} seconds")
     log_file.write(f"Total time taken: {hours} hours, {minutes} minutes, {seconds} seconds\n")
     # Save local log file

@@ -7,13 +7,13 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -
 REPO_ROOT="${SCRIPT_DIR}"
 export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 
-base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2026-01-02/18-30-03_DP_basis_ex1_angle_from_0_22.5_45_315_338.5"
+base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2026-01-04/23-52-46_DP_basis_panda_0_ur5_22.5_task_0"
 checkpoint_dir="${base_ckpt_dir}/checkpoints"
-checkpoint_step="100000"
+checkpoint_step="030000"
 ckpt_path="${checkpoint_dir}/${checkpoint_step}/pretrained_model"
 log_root="./logs-angle-test"
 export MUJOCO_GL=egl
-angles=(0 5 10)
+angles=(0 22.5)
 tasks=(0)       # 0=A, 4=B
 seeds=(7 8 9)
 # angles=(0)
