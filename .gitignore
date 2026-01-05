@@ -186,3 +186,6 @@ dataset_git/libero_*/
 logs-angle-test/
 cam_info_*/
 eef_*/
+logs-angle-test-ur5e/
+multi_task_*/
+experiments/robot/libero/*.json

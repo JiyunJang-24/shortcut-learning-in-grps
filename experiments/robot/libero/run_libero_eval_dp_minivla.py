@@ -435,7 +435,6 @@ def eval_libero(cfg: GenerateConfig) -> None:
 
                         with torch.inference_mode():
                             action = policy.select_action(observation)
-
                         # Prepare the action for the environment
                         numpy_action = action.squeeze(0).to("cpu").numpy()
 
