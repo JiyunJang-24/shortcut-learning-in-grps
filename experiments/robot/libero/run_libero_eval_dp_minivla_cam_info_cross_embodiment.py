@@ -91,6 +91,7 @@ from experiments.robot.libero.libero_utils import (
     quat2axisangle,
     save_rollout_video,
     save_rollout_video_dir,
+    get_libero_env_multi_embodiment
 )
 from experiments.robot.openvla_utils import get_processor
 from experiments.robot.robot_utils import (
@@ -103,6 +104,12 @@ from experiments.robot.robot_utils import (
     set_seed_everywhere,
 )
 import sys
+
+from experiments.robot.libero.libero_ur5_utils import (
+    convert_franka_flat_to_ur5e_flat,
+    compare_eef_pos,
+)
+
 if os.getcwd() not in sys.path:
     sys.path.append(os.getcwd())
 import LIBERO.xyg_scripts.rotate_recolor_dataset as rotate_recolor_dataset
@@ -188,6 +195,9 @@ class GenerateConfig:
     specific_task_id: int = None
     use_plucker: bool = False
     use_dynamics_basis: bool = False
+    robot: str = "Panda"
+    gripper_type: str = "default"
+
 
 def check_eval_finish(local_log_filepath):
     base_path = os.path.dirname(local_log_filepath)
@@ -361,8 +371,12 @@ def eval_libero(cfg: GenerateConfig) -> None:
         initial_states = task_suite.get_task_init_states(task_id)
 
         # Initialize LIBERO environment and task description
-        env, task_description = get_libero_env(task, cfg.model_family, resolution=resize_size)
-
+        # env, task_description = get_libero_env(task, cfg.model_family, resolution=resize_size)
+        env_kwargs = {}
+        env_kwargs['robots'] = [cfg.robot]
+        env_kwargs['gripper_types'] = [cfg.gripper_type]            
+        env, task_description = get_libero_env_multi_embodiment(task, cfg.model_family, resolution=resize_size, **env_kwargs)
+        franka_env, task_description = get_libero_env(task, cfg.model_family, resolution=resize_size)
         # Start episodes
         task_episodes, task_successes = 0, 0
         for episode_idx in tqdm.tqdm(range(cfg.num_trials_per_task)):
@@ -371,8 +385,14 @@ def eval_libero(cfg: GenerateConfig) -> None:
 
             # Reset environment
             env.reset()
+            franka_env.reset()
             if cfg.model_family == "diffusion":
                 policy.reset()
+
+            franka_obs = franka_env.set_init_state(initial_states[episode_idx])
+            ur5_init_state = convert_franka_flat_to_ur5e_flat(franka_env, env, initial_states[episode_idx])
+            obs = env.set_init_state(ur5_init_state)
+            compare_eef_pos(franka_env, env)
 
             viewpoint_rotate = np.random.uniform(viewpoint_rotate_min, viewpoint_rotate_max)
             color_scale = np.random.uniform(color_scale_min, color_scale_max)
@@ -384,14 +404,17 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                                                      camera_id=camera_id, camera_name=camera_name, robot_base_name=robot_base_name, 
                                                                      theta=viewpoint_rotate, debug=False, need_change_light=change_light, base_num=base_num)
             else:
-                env = rotate_recolor_dataset.rotate_camera(env=env, camera_id=camera_id, camera_name=camera_name, 
+                if cfg.robot != "Panda":
+                    env = rotate_recolor_dataset.rotate_camera_ur5e(env=franka_env, ur5e_env=env, camera_id=camera_id, camera_name=camera_name, 
+                                                            robot_base_name=robot_base_name, theta=viewpoint_rotate, debug=False)
+                else:
+                    env = rotate_recolor_dataset.rotate_camera(env=env, camera_id=camera_id, camera_name=camera_name, 
                                                            robot_base_name=robot_base_name, theta=viewpoint_rotate, debug=False)
             
             # change the transparency of the transparent object
             env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
             
             # Set initial states
-            obs = env.set_init_state(initial_states[episode_idx])
             height, width, channel = obs["agentview_image"].shape
             intrinsic_matrix = torch.from_numpy(CU.get_camera_intrinsic_matrix(env.sim, camera_name, height, width)).float()
             extrinsic_matrix = torch.from_numpy(CU.get_camera_extrinsic_matrix(env.sim, camera_name)).float()
@@ -459,7 +482,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                     origin_robot=True,
                                     origin_fallback="pp",
                                     arrow_len=60,
-                                    return_overlay=True,
+                                    return_overlay=False,
                                 ) # (B, 3, H, W)
                                 # save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
                                 # save_rgb_image(image[0].to('cpu'), "eef_overlay_out/origin_img.png")

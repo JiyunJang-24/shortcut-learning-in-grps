@@ -48,7 +48,6 @@ class ControlEnv:
 
         problem_info = BDDLUtils.get_problem_info(bddl_file_name)
         # Check if we're using a multi-armed environment and use env_configuration argument if so
-
         # Create environment
         self.problem_name = problem_info["problem_name"]
         self.domain_name = problem_info["domain_name"]

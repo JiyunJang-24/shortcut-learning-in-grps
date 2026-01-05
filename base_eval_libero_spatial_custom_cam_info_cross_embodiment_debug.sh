@@ -28,7 +28,7 @@ for seed in "${seeds[@]}"; do
     for angle in "${angles[@]}"; do
       outdir="${log_root}/seed_${seed}/task_${task}/angle_${angle}"
       mkdir -p "$outdir"
-      python -u experiments/robot/libero/run_libero_eval_dp_minivla_cam_info.py \
+      python -u experiments/robot/libero/run_libero_eval_dp_minivla_cam_info_cross_embodiment.py \
         --model_family diffusion \
         --pretrained_checkpoint "${ckpt_path}" \
         --task_suite_name libero_spatial \
@@ -45,7 +45,9 @@ for seed in "${seeds[@]}"; do
         --local_log_dir "${outdir}" \
         --seed "${seed}" \
         --use_plucker false \
-        --use_dynamics_basis true
+        --use_dynamics_basis true \
+        --robot "Panda" \
+        --gripper_type "default"
     done
   done
 done
