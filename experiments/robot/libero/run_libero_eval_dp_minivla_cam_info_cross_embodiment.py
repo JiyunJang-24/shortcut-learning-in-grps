@@ -385,8 +385,14 @@ def eval_libero(cfg: GenerateConfig) -> None:
 
             # Reset environment
             env.reset()
+            franka_env.reset()
             if cfg.model_family == "diffusion":
                 policy.reset()
+
+            franka_obs = franka_env.set_init_state(initial_states[episode_idx])
+            ur5_init_state = convert_franka_flat_to_ur5e_flat(franka_env, env, initial_states[episode_idx])
+            obs = env.set_init_state(ur5_init_state)
+            compare_eef_pos(franka_env, env)
 
             viewpoint_rotate = np.random.uniform(viewpoint_rotate_min, viewpoint_rotate_max)
             color_scale = np.random.uniform(color_scale_min, color_scale_max)
@@ -400,20 +406,15 @@ def eval_libero(cfg: GenerateConfig) -> None:
             else:
                 if cfg.robot != "Panda":
                     env = rotate_recolor_dataset.rotate_camera_ur5e(env=franka_env, ur5e_env=env, camera_id=camera_id, camera_name=camera_name, 
-                                                            robot_base_name=robot_base_name, theta=viewpoint_rotate, debug=True)
+                                                            robot_base_name=robot_base_name, theta=viewpoint_rotate, debug=False)
                 else:
                     env = rotate_recolor_dataset.rotate_camera(env=env, camera_id=camera_id, camera_name=camera_name, 
-                                                           robot_base_name=robot_base_name, theta=viewpoint_rotate, debug=True)
+                                                           robot_base_name=robot_base_name, theta=viewpoint_rotate, debug=False)
             
             # change the transparency of the transparent object
             env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
             
             # Set initial states
-            
-            franka_obs = franka_env.set_init_state(initial_states[episode_idx])
-            ur5_init_state = convert_franka_flat_to_ur5e_flat(franka_env, env, initial_states[episode_idx])
-            obs = env.set_init_state(ur5_init_state)
-            compare_eef_pos(franka_env, env)
             height, width, channel = obs["agentview_image"].shape
             intrinsic_matrix = torch.from_numpy(CU.get_camera_intrinsic_matrix(env.sim, camera_name, height, width)).float()
             extrinsic_matrix = torch.from_numpy(CU.get_camera_extrinsic_matrix(env.sim, camera_name)).float()
@@ -481,7 +482,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                     origin_robot=True,
                                     origin_fallback="pp",
                                     arrow_len=60,
-                                    return_overlay=True,
+                                    return_overlay=False,
                                 ) # (B, 3, H, W)
                                 # save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
                                 # save_rgb_image(image[0].to('cpu'), "eef_overlay_out/origin_img.png")
