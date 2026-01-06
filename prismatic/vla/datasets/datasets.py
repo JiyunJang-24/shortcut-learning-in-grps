@@ -107,7 +107,6 @@ class RLDSBatchTransform:
 
         # Plucker
         if "intrinsic_matrix" in rlds_batch and "extrinsic_matrix" in rlds_batch:
-            import pudb; pudb.set_trace()
             intrinsic_tensor = torch.from_numpy(rlds_batch["intrinsic_matrix"]).float()
             extrinsic_tensor = torch.from_numpy(rlds_batch["extrinsic_matrix"]).float()
 

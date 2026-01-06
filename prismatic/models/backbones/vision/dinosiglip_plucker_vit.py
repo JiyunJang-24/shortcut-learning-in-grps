@@ -14,6 +14,7 @@ from PIL import Image
 from timm.models.vision_transformer import Block, VisionTransformer
 
 from torch import nn
+import torch.nn.functional as F
 from torch.distributed.fsdp.wrap import _module_wrap_policy, _or_policy, transformer_auto_wrap_policy
 from torchvision.transforms import Compose, Resize
 
@@ -24,6 +25,43 @@ from prismatic.models.backbones.vision.base_vision import (
     compute_sequence_patches,
     unpack_tuple,
 )
+
+
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+"""
+Backbone module for injecting Plucker Embeddings.
+"""
+class FrozenBatchNorm2d(torch.nn.Module):
+
+    def __init__(self, n, eps=1e-5):
+        super(FrozenBatchNorm2d, self).__init__()
+        self.register_buffer("weight", torch.ones(n))
+        self.register_buffer("bias", torch.zeros(n))
+        self.register_buffer("running_mean", torch.zeros(n))
+        self.register_buffer("running_var", torch.ones(n))
+        self.eps = eps
+
+    def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict,
+                              missing_keys, unexpected_keys, error_msgs):
+        num_batches_tracked_key = prefix + 'num_batches_tracked'
+        if num_batches_tracked_key in state_dict:
+            del state_dict[num_batches_tracked_key]
+
+        super(FrozenBatchNorm2d, self)._load_from_state_dict(
+            state_dict, prefix, local_metadata, strict,
+            missing_keys, unexpected_keys, error_msgs)
+
+    def forward(self, x):
+        w = self.weight.reshape(1, -1, 1, 1)
+        b = self.bias.reshape(1, -1, 1, 1)
+        rv = self.running_var.reshape(1, -1, 1, 1)
+        rm = self.running_mean.reshape(1, -1, 1, 1)
+        eps = self.eps
+        scale = w * (rv + eps).rsqrt()
+        bias = b - rm * scale
+        return x * scale + bias
+
+
 
 # Registry =>> Supported DinoSigLIP Pairs (as TIMM identifiers)
 DINOSigLIP_VISION_BACKBONES = {
@@ -153,10 +191,8 @@ class DinoSigLIPPluckerViTBackbone(VisionBackbone):
         else:
             raise ValueError(f"Image Resize Strategy `{self.image_resize_strategy}` is not supported!")
 
-        import pudb; pudb.set_trace()
-
         # PLUCKER
-        # self._init_plucker()
+        self._init_plucker()
 
     def _init_plucker(self):
         # Plucker fusion modules (before connector)
@@ -204,6 +240,12 @@ class DinoSigLIPPluckerViTBackbone(VisionBackbone):
             dino_patches = self.dino_featurizer(pixel_values["dino"])
             siglip_patches = self.siglip_featurizer(pixel_values["siglip"])
             image_hidden_states = torch.cat([dino_patches, siglip_patches], dim=2)
+
+            # Determine grid size from number of tokens L = s*s
+            b, l, dv = image_hidden_states.shape
+            s = int(l ** 0.5)
+            if s * s != l:
+                raise ValueError("Non-square token grid from vision encoder; cannot align Plücker features")
 
             # Encode Plücker and pool to s x s grid
             p_feat = self.plucker_encoder(pixel_values["plucker"])
