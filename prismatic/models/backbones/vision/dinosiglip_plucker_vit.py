@@ -109,11 +109,13 @@ class DinoSigLIPPluckerViTBackbone(VisionBackbone):
             self.dino_timm_path_or_url, pretrained=True, num_classes=0, img_size=self.default_image_size
         )
         self.dino_featurizer.eval()
+        self.dino_featurizer.requires_grad_(False)
 
         self.siglip_featurizer: VisionTransformer = timm.create_model(
             self.siglip_timm_path_or_url, pretrained=True, num_classes=0, img_size=self.default_image_size
         )
         self.siglip_featurizer.eval()
+        self.siglip_featurizer.requires_grad_(False)
 
         # Monkey-Patch the `forward()` function of the featurizers to ensure FSDP-compatibility
         #   => Note: By default set `get_intermediate_layers` to return the *SECOND-TO-LAST* layer patches!
@@ -226,6 +228,14 @@ class DinoSigLIPPluckerViTBackbone(VisionBackbone):
         self.plucker_out_proj = self.plucker_out_proj.to(dtype=vf_dtype)
         self.vision_fusion_proj = self.vision_fusion_proj.to(dtype=vf_dtype)
 
+
+    def train(self, mode: bool = True) -> "DinoSigLIPPluckerViTBackbone":
+        """Override train to keep DINO/SigLIP frozen."""
+        super().train(mode)
+        # Always keep base vision encoders in eval mode
+        self.dino_featurizer.eval()
+        self.siglip_featurizer.eval()
+        return self
 
 
     def get_fsdp_wrapping_policy(self) -> Callable:
