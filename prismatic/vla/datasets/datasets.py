@@ -12,6 +12,7 @@ from typing import Any, Dict, Tuple, Type
 
 import numpy as np
 import torch
+import einops
 from PIL import Image
 from torch.utils.data import Dataset, IterableDataset
 from transformers import PreTrainedTokenizerBase
@@ -24,6 +25,8 @@ from prismatic.vla.action_tokenizer import ActionTokenizer
 from prismatic.vla.datasets.rlds import make_interleaved_dataset, make_single_dataset
 from prismatic.vla.datasets.rlds.oxe import OXE_NAMED_MIXTURES, get_oxe_dataset_kwargs_and_weights
 from prismatic.vla.datasets.rlds.utils.data_utils import NormalizationType
+
+from lerobot.lerobot.common.datasets.camera_utils import PluckerEmbedder
 
 # HuggingFace Default / LLaMa-2 IGNORE_INDEX (for labels)
 IGNORE_INDEX = -100
@@ -101,6 +104,20 @@ class RLDSBatchTransform:
         labels[: -(num_answer_tokens + num_end_tokens)] = IGNORE_INDEX
         if not self.predict_stop_token:
             labels[-num_end_tokens:] = IGNORE_INDEX
+
+        # Plucker
+        if "intrinsic_matrix" in rlds_batch and "extrinsic_matrix" in rlds_batch:
+            import pudb; pudb.set_trace()
+            intrinsic_tensor = torch.from_numpy(rlds_batch["intrinsic_matrix"]).float()
+            extrinsic_tensor = torch.from_numpy(rlds_batch["extrinsic_matrix"]).float()
+
+            img_size = pixel_values['siglip'].size()[-2]
+            plucker_embedder = PluckerEmbedder(img_size=img_size, device='cpu')
+
+            plucker_data = plucker_embedder(intrinsic_tensor, extrinsic_tensor)
+            plucker_tensor = einops.rearrange(plucker_data['plucker'], 'h w c -> c h w').to('cuda', non_blocking=True)
+
+            pixel_values['plucker'] = plucker_tensor
 
         return dict(pixel_values=pixel_values, input_ids=input_ids, labels=labels, dataset_name=dataset_name)
 
