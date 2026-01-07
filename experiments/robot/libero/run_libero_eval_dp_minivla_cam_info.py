@@ -462,7 +462,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                     origin_robot=True,
                                     origin_fallback="pp",
                                     arrow_len=60,
-                                    return_overlay=True,
+                                    return_overlay=False,
                                 ) # (B, 3, H, W)
                                 # save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
                                 # save_rgb_image(image[0].to('cpu'), "eef_overlay_out/origin_img.png")

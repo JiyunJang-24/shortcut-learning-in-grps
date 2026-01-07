@@ -14,7 +14,8 @@ conda activate shortcut-learning
 # Run from the root of the repository
 DATA_MIX="v-1.000-1.000_num1"
 # 判断路径是否存在, LIBERO_DATA_ROOT
-LIBERO_DATA_ROOT="/root/Desktop/workspace/jiyun/shortcut-learning-in-grps/dataset_git/libero_spatial_no_noops_island_1_rlds/cam_info_10_10_0.0_0.0"
+# LIBERO_DATA_ROOT="/root/Desktop/workspace/jiyun/shortcut-learning-in-grps/dataset_git/libero_spatial_no_noops_island_1_rlds/cam_info_10_10_0.0_0.0"
+LIBERO_DATA_ROOT="/data1/local/shortcut-learning-in-grps/dataset_git/libero_spatial_no_noops_island_1_rlds/cam_info_10_10_0.0_0.0"
 if [ -e ${LIBERO_DATA_ROOT} ] ; then
     echo "LIBERO_PATH=${LIBERO_DATA_ROOT}"
 else
@@ -29,7 +30,7 @@ WANDB_ENTITY="DynamicVLA" # should be you user name or team name in w&b account
 max_steps=10000
 WORLD_SIZE=1
 BATCH_SIZE=1
-CUDA_VISIBLE_DEVICES_LIST="0"
+CUDA_VISIBLE_DEVICES_LIST="3"
 
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_LIST}"
 
@@ -49,4 +50,5 @@ OMP_NUM_THREADS=4 torchrun --standalone --nnodes 1 --nproc-per-node "${WORLD_SIZ
   --run_root_dir "${LOG_ROOT}" \
   --wandb_project "${WANDB_PROJECT}" \
   --wandb_entity "${WANDB_ENTITY}" \
-  --is_resume False
+  --is_resume False \
+  --mode "basis"

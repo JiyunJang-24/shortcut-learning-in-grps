@@ -8,3 +8,4 @@ from .siglip_vit import SigLIPViTBackbone
 
 
 from .dinosiglip_plucker_vit import DinoSigLIPPluckerViTBackbone
+from .dinosiglip_basis_vit import DinoSigLIPBasisViTBackbone

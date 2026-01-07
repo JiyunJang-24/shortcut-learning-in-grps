@@ -289,6 +289,18 @@ class Exp_Qwen25_DinoSigLIP_Plucker_224px_0_5B_LIBERO_SPATIAL(Exp_SigLIP_224px_B
     global_batch_size: int = 16
     per_device_batch_size: int = 16
 
+# === Qwen2.5 0.5B SigLIP 224px & **Basis** ===
+@dataclass
+class Exp_Qwen25_DinoSigLIP_Basis_224px_0_5B_LIBERO_SPATIAL(Exp_SigLIP_224px_Bridge):
+    vla_id: str = "prism-qwen25-dinosiglip-basis-224px+0_5b+mx-libero-spatial"
+    base_vlm: Union[str, Path] = "prism-qwen25-extra-dinosiglip-basis-224px+0_5b"
+    action_tokenizer: str = "extra_action_tokenizer"
+
+    data_mix: str = "libero_spatial"
+
+    expected_world_size: int = 1
+    global_batch_size: int = 16
+    per_device_batch_size: int = 16
 
 
 # === Define a VLA Registry Enum for Reference & Validation ===
@@ -318,6 +330,8 @@ class VLARegistry(Enum):
 
     QWEN25_DINOSIGLIP_PLUCKER_224PX_0_5B_LIBERO_SPATIAL = Exp_Qwen25_DinoSigLIP_Plucker_224px_0_5B_LIBERO_SPATIAL
 
+    QWEN25_DINOSIGLIP_BASIS_224PX_0_5B_LIBERO_SPATIAL = Exp_Qwen25_DinoSigLIP_Basis_224px_0_5B_LIBERO_SPATIAL
+    
     # === TDROID Fine-tuning Configs ===
     SIGLIP_224PX_MX_TDROID_CARROT_IN_BOWL = Exp_SigLIP_224px_TDROID_CarrotInBowl
     SIGLIP_224PX_MX_TDROID_POUR_CORN_IN_POT = Exp_SigLIP_224px_TDROID_PourCornInPot
