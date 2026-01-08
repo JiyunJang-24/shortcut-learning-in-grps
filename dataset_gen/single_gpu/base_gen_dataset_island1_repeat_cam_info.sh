@@ -24,7 +24,7 @@ viewpoint_rotate=(0.0)
 vmin=1.00
 vmax=1.00
 num_tasks_in_suite=1
-specify_task_id_list=(0 4)
+specify_task_id_list=(0 7)
 number_demo_per_task=10
 demo_repeat_times=10
 

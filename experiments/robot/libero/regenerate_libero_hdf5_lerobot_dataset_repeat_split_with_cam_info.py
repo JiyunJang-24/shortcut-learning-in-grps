@@ -202,6 +202,24 @@ def main(args):
         print(f"Removing existing dataset at {lerobot_output_path}")
         raise ValueError(f"Dataset already exists at {lerobot_output_path}")
         shutil.rmtree(lerobot_output_path)
+
+    for task_id in task_id_list:
+        # Get task in suite
+        task = task_suite.get_task(task_id)
+        # Get dataset for task
+        orig_data_path = os.path.join(args.libero_raw_data_dir, f"{task.name}_demo.hdf5")
+        assert os.path.exists(orig_data_path), f"Cannot find raw data file {orig_data_path}."
+        orig_data_file = h5py.File(orig_data_path, "r")
+        orig_data = orig_data_file["data"]
+        for orig_data_key in orig_data.keys():  # demo_0, demo_1, ..., demo_49, ...
+            # get demo data
+            i = int(orig_data_key.split("_")[-1])
+            demo_data = orig_data[f"demo_{i}"]
+            orig_actions = demo_data["actions"][()]     #  The () is used to indicate that you want to read the entire dataset
+            orig_states = demo_data["states"][()]
+            break
+        break 
+    dim = orig_states[0].shape
     dataset = LeRobotDataset.create(
         repo_id=repo_name,
         robot_type="panda",
@@ -225,7 +243,7 @@ def main(args):
             },
             "observation.environment_state": {      # 不同的环境environment_state 的维度不一样
                 "dtype": "float32",
-                "shape": (92,),
+                "shape": dim,
                 "names": ["state"],
             },
             "action": {
@@ -311,7 +329,7 @@ def main(args):
                 else:
                     env = rotate_recolor_dataset.rotate_camera(env, camera_id=camera_id, camera_name=camera_name, robot_base_name=robot_base_name, 
                                                               theta=viewpoint_rotate, debug=False)
-                env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
+                # env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
                 
                 for _ in range(10):
                     obs, reward, done, info = env.step(get_libero_dummy_action("llava"))
@@ -474,7 +492,7 @@ def main(args):
                                                                 theta=viewpoint_rotate, debug=False)
                     
                     # change the transparency of the transparent object
-                    env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
+                    # env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
                     
                     for _ in range(10):
                         obs, reward, done, info = env.step(get_libero_dummy_action("llava"))

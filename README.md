@@ -61,7 +61,7 @@ pip install -e .
 # RLDS dataset builder
 cd ..
 cd dataset_git
-git clone https://github.com/Lucky-Light-Sun/rlds_dataset_builder.git
+git clone https://github.com/jiyunjang-24/rlds_dataset_builder.git
 
 # VQ-BET (for action tokenization/chunking)
 git clone https://github.com/jayLEE0301/vq_bet_official.git
