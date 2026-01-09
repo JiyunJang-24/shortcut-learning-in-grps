@@ -506,6 +506,23 @@ def eval_libero(cfg: GenerateConfig) -> None:
                             # interleaved images [... image_t, wrist_t ...]
                             image_history = [val for tup in zip(image_history, wrist_image_history) for val in tup]
 
+
+                        if cfg.use_plucker:
+                            intrinsic_matrix = torch.from_numpy(CU.get_camera_intrinsic_matrix(env.sim, camera_name, height, width)).float()
+                            extrinsic_matrix = torch.from_numpy(CU.get_camera_extrinsic_matrix(env.sim, camera_name)).float()
+                            plucker_extrinsic_matrix = remove_extrinsic_camera_axis_correction(extrinsic_matrix)
+
+                            plucker_embedder = PluckerEmbedder(img_size=height, device='cpu')
+
+                            with torch.no_grad():
+                                intrinsic_tensor = intrinsic_matrix.unsqueeze(0)
+                                extrinsic_tensor = plucker_extrinsic_matrix.unsqueeze(0)
+                                plucker_data = plucker_embedder(intrinsic_tensor, extrinsic_tensor)
+                                plucker_tensor = einops.rearrange(plucker_data['plucker'], 's h w c -> s c h w').to('cuda', non_blocking=True)
+
+                        else:
+                            plucker_tensor = None
+
                         # Prepare observations dict
                         # Note: OpenVLA does not take proprio state as input
                         observation = {
@@ -513,6 +530,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                             "state": np.concatenate(
                                 (obs["robot0_eef_pos"], quat2axisangle(obs["robot0_eef_quat"]), obs["robot0_gripper_qpos"])
                             ),
+                            "plucker": plucker_tensor
                         }
 
                         # Query model to get action
