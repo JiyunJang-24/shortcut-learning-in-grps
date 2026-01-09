@@ -118,28 +118,31 @@ class RLDSBatchTransform:
             intrinsic_tensor = torch.from_numpy(rlds_batch["intrinsic_matrix"]).float()
             extrinsic_tensor = torch.from_numpy(rlds_batch["extrinsic_matrix"]).float()
             plucker_extrinsic_tensor = remove_extrinsic_camera_axis_correction(extrinsic_tensor)
+
             img_size = pixel_values['siglip'].size()[-2]
-            if mode == "plucker":
+            if self.mode == "plucker":
                 with torch.no_grad():
                     plucker_embedder = PluckerEmbedder(img_size=img_size, device='cpu')
                     plucker_data = plucker_embedder(intrinsic_tensor, plucker_extrinsic_tensor)
                     plucker_tensor = einops.rearrange(plucker_data['plucker'], 'h w c -> c h w').to('cuda', non_blocking=True)
                 pixel_values['plucker'] = plucker_tensor
-            elif mode == "basis":
+            elif self.mode == "basis":
                 with torch.no_grad():
-                    motion_dynamics_basis = _get_motion_dynamics_basis(intrinsic_matrix, cam_to_world=plucker_extrinsic_matrix).reshape(-1)
+                    state = rlds_batch["observation"]["proprio"]
+                    motion_dynamics_basis = _get_motion_dynamics_basis(intrinsic_tensor, cam_to_world=plucker_extrinsic_tensor).reshape(-1)
                     axis_tensor, origin_xy = _make_motion_basis_axis_rgb_tensor_cam_to_world(
-                        rgb_tensor=image.to('cpu'),                  # (B, 3,H,W)
+                        rgb_tensor=pixel_values["siglip"].to('cpu'),                  # (B, 3,H,W)
                         motion_dynamics_basis=motion_dynamics_basis,
-                        cam_to_world=plucker_extrinsic_matrix,                  # cam_pose = cam_to_world (고정)
-                        intrinsic_matrix=intrinsic_matrix,
-                        robot_eef_abs_poses=state[:, -7:],  # eef pose (B, 7)
+                        cam_to_world=plucker_extrinsic_tensor,                  # cam_pose = cam_to_world (고정)
+                        intrinsic_matrix=intrinsic_tensor,
+                        robot_eef_abs_poses=state[:, :7],  # eef pose (B, 7)
                         origin_robot=True,
                         origin_fallback="pp",
                         arrow_len=60,
-                        return_overlay=False,
-                    ).to('cuda', non_blocking=True)
-                pixel_values['basis'] = axis_tensor
+                        return_overlay=True,
+                    )
+                    save_rgb_image(axis_tensor, "basis.png")
+                pixel_values['basis'] = axis_tensor.to('cuda', non_blocking=True)
                 # image = torch.cat([image, axis_tensor.to('cuda')], dim=1)
 
         return dict(pixel_values=pixel_values, input_ids=input_ids, labels=labels, dataset_name=dataset_name)
