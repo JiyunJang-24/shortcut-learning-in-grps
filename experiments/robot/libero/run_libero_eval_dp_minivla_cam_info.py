@@ -59,9 +59,6 @@ import torch
 memory_x = torch.ones(6*8*8, 1024, 1024).cuda()
 import json
 import sys
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Optional, Union
 import time
 import glob
 import einops
@@ -102,6 +99,7 @@ from experiments.robot.robot_utils import (
     normalize_gripper_action,
     set_seed_everywhere,
 )
+from experiments.robot.libero.eval_utils import GenerateConfig, validate_cli_args
 import sys
 if os.getcwd() not in sys.path:
     sys.path.append(os.getcwd())
@@ -125,71 +123,7 @@ def _json_to_tensors(obj):
         return obj
     return obj  # 그 외 타입은 그대로 (예: 문자열 키 등)
 
-@dataclass
-class GenerateConfig:
-    # fmt: off
 
-    #################################################################################################################
-    # Model-specific parameters
-    #################################################################################################################
-    model_family: str = "diffusion"                    # Model family
-    hf_token: str = Path(".hf_token")
-    # Pretrained checkpoint path
-    pretrained_checkpoint: Union[str, Path] = "/mnt/hdd3/xingyouguang/projects/robotics/lerobot/outputs/train/2025-03-26/21-24-06_diffusion/checkpoints/030000/pretrained_model"
-
-
-    # no use for next 5 lines
-    load_in_8bit: bool = False                       # (For OpenVLA only) Load with 8-bit quantization
-    load_in_4bit: bool = False                       # (For OpenVLA only) Load with 4-bit quantization
-    center_crop: bool = True                         # Center crop? (if trained w/ random crop image aug)
-    obs_history: int = 1                             # Number of images to pass in from history
-    use_wrist_image: bool = False                    # Use wrist images (doubles the number of input images)
-
-    #################################################################################################################
-    # LIBERO environment-specific parameters
-    #################################################################################################################
-    task_suite_name: str = "libero_spatial"          # Task suite.
-    #                                       Options: libero_spatial, libero_object, libero_goal, libero_10, libero_90
-    num_steps_wait: int = 10                         # Number of steps to wait for objects to stabilize in sim
-    num_trials_per_task: int = 10                    # Number of rollouts per task 50
-    num_tasks_in_suite: int = 10
-
-    viewpoint_rotate_min_interpolate_weight: float = 0.25
-    viewpoint_rotate_max_interpolate_weight: float = 0.25
-    color_scale_min_interpolate_weight: float = 0.25
-    color_scale_max_interpolate_weight: float = 0.25
-
-    viewpoint_rotate_upper_bound: float = 90.0
-    viewpoint_rotate_lower_bound: float = -10.0
-    need_color_change: bool = True
-    color_light_a = [1.0, 0.0, 0.0]
-    color_light_b = [1.0, 1.0, 0.0]
-    color_scale_upper_bound = 1.0
-    color_scale_lower_bound = 0.0
-
-    #################################################################################################################
-    # Utils
-    #################################################################################################################
-    run_id_note: Optional[str] = None                # Extra note to add in run ID for logging
-    local_log_dir: str = "./experiments/logs"        # Local directory for eval logs
-    prefix: str = ''
-
-    use_wandb: bool = False                          # Whether to also log results in Weights & Biases
-    wandb_project: str = "prismatic"        # Name of W&B project to log to (use default!)
-    wandb_entity: Optional[str] = None          # Name of entity to log under
-
-    seed: int = 7                                    # Random Seed (for reproducibility)
-
-    # fmt: on
-    re_eval: bool = False
-    change_light: bool = False
-    base_num: float = 0.05
-
-    specific_task_id: int = None
-    use_plucker: bool = False
-    use_dynamics_basis: bool = False
-
-    mode: str = "vanilla"
 
 def check_eval_finish(local_log_filepath):
     base_path = os.path.dirname(local_log_filepath)
@@ -211,6 +145,8 @@ def check_eval_finish(local_log_filepath):
             return True, similar_txt_file
     return False, similar_txt_file
 
+
+
 @draccus.wrap()
 def eval_libero(cfg: GenerateConfig) -> None:
     assert cfg.pretrained_checkpoint is not None, "cfg.pretrained_checkpoint must not be None!"
@@ -218,10 +154,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
         assert cfg.center_crop, "Expecting `center_crop==True` because model was trained with image augmentations!"
     assert not (cfg.load_in_8bit and cfg.load_in_4bit), "Cannot use both 8-bit and 4-bit quantization!"
 
-    # Eval arguments validation
-    assert cfg.mode in ["vanilla", "plucker", "basis"], f"[Error] Invalid mode argument: {cfg.mode}!"
-    if cfg.mode == "plucker": assert cfg.use_plucker, f"[Error] If the eval mode is `plucer`, then use_plucker should be true!"
-    print(f"EVAL MODE: {cfg.mode}")
+    validate_cli_args(cfg)
 
     # Set random seed
     set_seed_everywhere(cfg.seed)
@@ -290,6 +223,8 @@ def eval_libero(cfg: GenerateConfig) -> None:
     processor = None
     if cfg.model_family == "openvla":
         processor = get_processor(cfg)
+
+
 
     log_file = open(local_log_filepath, "w", buffering=1)  # Enable line buffering
     print(f"Logging to local log file: {local_log_filepath}")
@@ -539,9 +474,11 @@ def eval_libero(cfg: GenerateConfig) -> None:
                             "full_image": image_history,
                             "state": np.concatenate(
                                 (obs["robot0_eef_pos"], quat2axisangle(obs["robot0_eef_quat"]), obs["robot0_gripper_qpos"])
-                            ),
-                            "plucker": plucker_tensor
+                            )
                         }
+
+                        if plucker_tensor is not None:
+                            observation["plucker"] = plucker_tensor
 
                         # Query model to get action
                         action = get_action(
