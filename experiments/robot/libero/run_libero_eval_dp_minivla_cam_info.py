@@ -189,6 +189,8 @@ class GenerateConfig:
     use_plucker: bool = False
     use_dynamics_basis: bool = False
 
+    mode: str = "vanilla"
+
 def check_eval_finish(local_log_filepath):
     base_path = os.path.dirname(local_log_filepath)
     all_txt_files = glob.glob(os.path.join(base_path, "*.txt"))
@@ -215,6 +217,11 @@ def eval_libero(cfg: GenerateConfig) -> None:
     if "image_aug" in cfg.pretrained_checkpoint:
         assert cfg.center_crop, "Expecting `center_crop==True` because model was trained with image augmentations!"
     assert not (cfg.load_in_8bit and cfg.load_in_4bit), "Cannot use both 8-bit and 4-bit quantization!"
+
+    # Eval arguments validation
+    assert cfg.mode in ["vanilla", "plucker", "basis"], f"[Error] Invalid mode argument: {cfg.mode}!"
+    if cfg.mode == "plucker": assert cfg.use_plucker, f"[Error] If the eval mode is `plucer`, then use_plucker should be true!"
+    print(f"EVAL MODE: {cfg.mode}")
 
     # Set random seed
     set_seed_everywhere(cfg.seed)
@@ -392,7 +399,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
 
             # change the transparency of the transparent object
             # env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
-            
+
             # Set initial states
             obs = env.set_init_state(initial_states[episode_idx])
             height, width, channel = obs["agentview_image"].shape
