@@ -591,7 +591,7 @@ class PrismaticVLM(VLM):
         return gen_texts if return_string_probabilities is None else gen_probabilities
 
     @torch.inference_mode()
-    def generate(self, image: Union[Img, List[Img]], prompt_text: str, **kwargs: str) -> str:
+    def generate(self, image: Union[Img, List[Img]], prompt_text: str, **kwargs: Union[str, torch.Tensor]) -> str:
         # For now, only support generation with a batch size of 1 for simplicity
         image_transform, tokenizer = self.vision_backbone.image_transform, self.llm_backbone.tokenizer
 
@@ -604,6 +604,10 @@ class PrismaticVLM(VLM):
             pixel_values = {k: v[None, ...].to(self.device) for k, v in pixel_values.items()}
         else:
             raise ValueError(f"Unsupported `pixel_values` type = {type(pixel_values)}")
+
+        if "plucker" in kwargs:
+            assert isinstance(kwargs["plucker"], torch.Tensor), f"Unsupported `plucker` type = {type(kwargs['plucker'])}"
+            pixel_values["plucker"] = kwargs["plucker"].to(self.device)
 
         # Invoke super().generate --> taps into `GenerationMixin` which (redirects) to `forward()`
         autocast_dtype = self.llm_backbone.half_precision_dtype
