@@ -55,7 +55,7 @@ class TrainConfig:
     vla: VLAConfig = field(
         default_factory=VLAConfig.get_choice_class(VLARegistry.DINOSIGLIP_224PX_MX_OXE_MAGIC_SOUP_PLUS.vla_id)
     )
-    
+
     # Directory Paths
     data_root_dir: Path = Path(                                     # Path to Open-X dataset directory
         "datasets/open-x-embodiment"
@@ -83,14 +83,14 @@ class TrainConfig:
     trackers: Tuple[str, ...] = ("jsonl", "wandb")                  # Trackers to initialize (if W&B, add config!)
     wandb_project: str = "prismatic"                                  # Name of W&B project to log to (use default!)
     wandb_entity: str = None                          # Name of entity to log under
-
+    mode: str = "vanilla"
     def __post_init__(self) -> None:
         """Lift optimization parameters from `self.vla` for ease of use =>> validate on `expected_world_size`"""
         # xyg added
         # self.vla.expected_world_size = 1    # expected 8
-        # self.vla.global_batch_size = 1      # expected 256 
+        # self.vla.global_batch_size = 1      # expected 256
         # self.vla.per_device_batch_size = 1  # expected 32
-        
+
         self.epochs = self.vla.epochs
         self.max_steps = self.vla.max_steps
         self.global_batch_size = self.vla.global_batch_size
@@ -141,7 +141,7 @@ def train(cfg: TrainConfig) -> None:
     from datetime import datetime
     current_time = datetime.now()
     cfg.run_root_dir = os.path.join(
-        "./logs", f"{current_time.year}-{current_time.month}-{current_time.day}", 
+        "./logs", f"{current_time.year}-{current_time.month}-{current_time.day}",
         f"{current_time.hour}-{current_time.minute}-{current_time.second}_{cfg.run_root_dir}"
     )
     cfg.run_root_dir = Path(cfg.run_root_dir)
@@ -174,13 +174,13 @@ def train(cfg: TrainConfig) -> None:
         vlm = load_vla(
             cfg.pretrained_checkpoint,
             hf_token=hf_token,
-            load_for_training=True,
+            load_for_training=False,
             image_sequence_len=cfg.image_sequence_len,
         )
 
     else:
         vlm = load(
-            cfg.vla.base_vlm, hf_token=hf_token, load_for_training=True, image_sequence_len=cfg.image_sequence_len
+            cfg.vla.base_vlm, hf_token=hf_token, load_for_training=True, image_sequence_len=cfg.image_sequence_len, mode=cfg.mode
         )
 
     # [Validate] Model should be in Full Precision!
@@ -232,11 +232,12 @@ def train(cfg: TrainConfig) -> None:
         # if using wrist images, we assume we passed in a 2x image sequence len
         image_window_size=cfg.image_sequence_len // 2 if cfg.use_wrist_image else cfg.image_sequence_len,
         use_wrist_image=cfg.use_wrist_image,  # will double the sequence length
+        mode=cfg.mode
     )
     # Save dataset statistics for de-normalization at inference time
     if overwatch.is_rank_zero():
         save_dataset_statistics(vla_dataset.dataset_statistics, run_dir)
-        
+
     # Create Train Strategy
     overwatch.info(f"Initializing Train Strategy `{cfg.train_strategy}`")
     train_strategy = get_train_strategy(

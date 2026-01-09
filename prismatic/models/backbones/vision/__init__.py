@@ -5,3 +5,7 @@ from .dinosiglip_vit import DinoSigLIPViTBackbone
 from .dinov2_vit import DinoV2ViTBackbone
 from .in1k_vit import IN1KViTBackbone
 from .siglip_vit import SigLIPViTBackbone
+
+
+from .dinosiglip_plucker_vit import DinoSigLIPPluckerViTBackbone
+from .dinosiglip_basis_vit import DinoSigLIPBasisViTBackbone
