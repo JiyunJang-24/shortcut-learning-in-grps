@@ -605,10 +605,6 @@ class PrismaticVLM(VLM):
         else:
             raise ValueError(f"Unsupported `pixel_values` type = {type(pixel_values)}")
 
-        if "plucker" in kwargs:
-            assert isinstance(kwargs["plucker"], torch.Tensor), f"Unsupported `plucker` type = {type(kwargs['plucker'])}"
-            pixel_values["plucker"] = kwargs["plucker"].to(self.device)
-
         # Invoke super().generate --> taps into `GenerationMixin` which (redirects) to `forward()`
         autocast_dtype = self.llm_backbone.half_precision_dtype
         with torch.autocast("cuda", dtype=autocast_dtype, enabled=self.enable_mixed_precision_training):

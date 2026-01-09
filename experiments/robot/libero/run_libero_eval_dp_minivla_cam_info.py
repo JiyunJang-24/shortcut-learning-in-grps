@@ -274,6 +274,9 @@ def eval_libero(cfg: GenerateConfig) -> None:
         else:
             if cfg.unnorm_key not in model.norm_stats and f"{cfg.unnorm_key}_no_noops" in model.norm_stats:
                 cfg.unnorm_key = f"{cfg.unnorm_key}_no_noops"
+            # Hard Coded ... SRY
+            elif "v-1.000-1.000_entire/libero_spatial" in model.norm_stats:
+                cfg.unnorm_key = "v-1.000-1.000_entire/libero_spatial"
             assert cfg.unnorm_key in model.norm_stats, f"Action un-norm key {cfg.unnorm_key} not found in VLA `norm_stats`!"
 
     # [OpenVLA] Get Hugging Face processor
