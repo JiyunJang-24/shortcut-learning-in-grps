@@ -29,6 +29,7 @@ from prismatic.vla.datasets.rlds.utils.data_utils import NormalizationType
 from lerobot.lerobot.common.datasets.camera_utils import (
     PluckerEmbedder,
     remove_extrinsic_camera_axis_correction,
+    intrinsic_image_size_calibration
 )
 from lerobot.lerobot.common.datasets.viz_utils import (
     _get_motion_dynamics_basis,
@@ -37,7 +38,6 @@ from lerobot.lerobot.common.datasets.viz_utils import (
 )
 # HuggingFace Default / LLaMa-2 IGNORE_INDEX (for labels)
 IGNORE_INDEX = -100
-
 
 @dataclass
 class RLDSBatchTransform:
@@ -116,6 +116,8 @@ class RLDSBatchTransform:
         # Plucker
         if "intrinsic_matrix" in rlds_batch and "extrinsic_matrix" in rlds_batch:
             intrinsic_tensor = torch.from_numpy(rlds_batch["intrinsic_matrix"]).float()
+            intrinsic_tensor = intrinsic_image_size_calibration(intrinsic_tensor)
+
             extrinsic_tensor = torch.from_numpy(rlds_batch["extrinsic_matrix"]).float()
             plucker_extrinsic_tensor = remove_extrinsic_camera_axis_correction(extrinsic_tensor)
 
@@ -128,8 +130,10 @@ class RLDSBatchTransform:
                 pixel_values['plucker'] = plucker_tensor
             elif self.mode == "basis":
                 with torch.no_grad():
-                    state = rlds_batch["observation"]["proprio"]
+                    state = rlds_batch["observation"]["eef_state"]
+
                     motion_dynamics_basis = _get_motion_dynamics_basis(intrinsic_tensor, cam_to_world=plucker_extrinsic_tensor).reshape(-1)
+
                     axis_tensor, origin_xy = _make_motion_basis_axis_rgb_tensor_cam_to_world(
                         rgb_tensor=pixel_values["siglip"].to('cpu'),                  # (B, 3,H,W)
                         motion_dynamics_basis=motion_dynamics_basis,
@@ -139,11 +143,10 @@ class RLDSBatchTransform:
                         origin_robot=True,
                         origin_fallback="pp",
                         arrow_len=60,
-                        return_overlay=True,
+                        return_overlay=False,
                     )
-                    save_rgb_image(axis_tensor, "basis.png")
+                    # save_rgb_image(pixel_values["siglip"].to('cpu'), "basis.png")
                 pixel_values['basis'] = axis_tensor.to('cuda', non_blocking=True)
-                # image = torch.cat([image, axis_tensor.to('cuda')], dim=1)
 
         return dict(pixel_values=pixel_values, input_ids=input_ids, labels=labels, dataset_name=dataset_name)
 
@@ -161,6 +164,7 @@ class RLDSDataset(IterableDataset):
         future_action_window_size: int = 0,
         image_window_size: int = 1,
         load_camera_views: tuple = ("primary",),
+        mode: str = "vanilla"
     ) -> None:
         """Lightweight wrapper around RLDS TFDS Pipeline for use with PyTorch/OpenVLA Data Loaders."""
         self.data_root_dir, self.data_mix, self.batch_transform = data_root_dir, data_mix, batch_transform
@@ -185,7 +189,7 @@ class RLDSDataset(IterableDataset):
             mixture_spec,
             load_camera_views=load_camera_views,
             load_depth=False,
-            load_proprio=False,
+            load_proprio=mode == "basis",
             load_language=True,
             action_proprio_normalization_type=NormalizationType.BOUNDS_Q99,
         )

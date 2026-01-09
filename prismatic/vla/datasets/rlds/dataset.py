@@ -158,7 +158,8 @@ def make_dataset_from_rlds(
                 new_obs[f"depth_{new}"] = old_obs[old]
 
         if state_obs_keys:
-            new_obs["proprio"] = tf.concat(
+            # BASIS
+            eef_state = tf.concat(
                 [
                     (
                         tf.zeros((traj_len, 1), dtype=tf.float32)  # padding
@@ -169,6 +170,9 @@ def make_dataset_from_rlds(
                 ],
                 axis=1,
             )
+            new_obs["proprio"] = eef_state
+            new_obs["eef_state"] = eef_state    # To avoid eef_state being normalized
+
 
         # add timestep info
         new_obs["timestep"] = tf.range(traj_len)

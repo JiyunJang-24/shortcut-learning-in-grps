@@ -10,7 +10,7 @@ heavy lifting.
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, List
 
 import torch
 import torch.distributed as dist
@@ -280,6 +280,9 @@ class TrainingStrategy(ABC):
 
         # === Train ===
         status = metrics.get_status()
+        self.vlm.train()
+        self.debug(metrics)
+
         with tqdm(
             total=(self.epochs * len(dataloader)) if self.max_steps is None else self.max_steps,
             desc=status,
@@ -405,6 +408,23 @@ class TrainingStrategy(ABC):
                 progress.update()
                 progress.set_description(status)
 
+    def _check_gradients(self, keywords: List[str]):
+        params_found = 0
+        # Unwrap DDP/FSDP if simple wrapper; FSDP `named_parameters` usually works for inspection
+        model_ref = self.vlm.module if hasattr(self.vlm, "module") else self.vlm
+        for name, param in model_ref.named_parameters():
+            if any([keyword in name for keyword in keywords]):
+                params_found += 1
+                # Check if grad exists
+                if param.grad is not None:
+                    grad_norm = param.grad.norm().item()
+                    print(f"  {name}: Grad=OK (Norm={grad_norm:.6f}) | ReqGrad={param.requires_grad}")
+                else:
+                    print(f"  {name}: Grad=NONE | ReqGrad={param.requires_grad}")
+        if params_found == 0:
+            print(f"  [WARNING] No parameters named with f{', '.join(keywords)} are found!")
+        print("-" * 50)
+
     def debug(self, metrics: VLAMetrics):
         # === DEBUG: Sanity Check Plucker Gradients ===
         if overwatch.is_rank_zero() and (metrics.global_step % 1 == 0):
@@ -414,19 +434,10 @@ class TrainingStrategy(ABC):
             print("-" * 50)
 
             print(f"\n[DEBUG] Checking Plucker Gradients at step {metrics.global_step}")
-            params_found = 0
-            # Unwrap DDP/FSDP if simple wrapper; FSDP `named_parameters` usually works for inspection
-            model_ref = self.vlm.module if hasattr(self.vlm, "module") else self.vlm
-            for name, param in model_ref.named_parameters():
-                if "plucker" in name or "vision_fusion" in name:
-                    params_found += 1
-                    # Check if grad exists
-                    if param.grad is not None:
-                        grad_norm = param.grad.norm().item()
-                        print(f"  {name}: Grad=OK (Norm={grad_norm:.6f}) | ReqGrad={param.requires_grad}")
-                    else:
-                        print(f"  {name}: Grad=NONE | ReqGrad={param.requires_grad}")
-            if params_found == 0:
-                print("  [WARNING] No 'plucker' or 'vision_fusion' parameters found!")
-            print("-" * 50)
+            self._check_gradients(["plucker", "vision_fusion"])
+
+            print(f"\n[DEBUG] Checking Basis Gradients at step {metrics.global_step}")
+            self._check_gradients(["basis", "vision_fusion"])
+
+
         # =============================================

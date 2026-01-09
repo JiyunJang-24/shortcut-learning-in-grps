@@ -83,6 +83,7 @@ def get_vla_dataset_and_collator(
         future_action_window_size=future_action_window_size,
         image_window_size=image_window_size,
         load_camera_views=load_camera_views,
+        mode=mode
     )
 
     return dataset, action_tokenizer, collator

@@ -193,7 +193,7 @@ class DinoSigLIPBasisViTBackbone(VisionBackbone):
         else:
             raise ValueError(f"Image Resize Strategy `{self.image_resize_strategy}` is not supported!")
 
-        # PLUCKER
+        # BASIS
         self._init_basis()
 
     def _init_basis(self):
