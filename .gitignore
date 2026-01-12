@@ -191,3 +191,4 @@ multi_task_*/
 experiments/robot/libero/*.json
 extrinsic_analysis/
 vla_cam_info*/
+DP_cam_info*/
