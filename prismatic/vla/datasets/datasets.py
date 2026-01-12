@@ -35,6 +35,7 @@ from lerobot.common.datasets.viz_utils import (
     _get_motion_dynamics_basis,
     _make_motion_basis_axis_rgb_tensor_cam_to_world,
     save_rgb_image,
+    _rescale_make_motion_basis_axis_rgb_tensor_cam_to_world,
 )
 # HuggingFace Default / LLaMa-2 IGNORE_INDEX (for labels)
 IGNORE_INDEX = -100
@@ -147,6 +148,22 @@ class RLDSBatchTransform:
                     )
                     # save_rgb_image(pixel_values["siglip"].to('cpu'), "basis.png")
                 pixel_values['basis'] = axis_tensor.to('cuda', non_blocking=True)
+            elif self.mode == "basis_rescale":
+                with torch.no_grad():
+                    state = rlds_batch["observation"]["eef_state"]
+                    axis_tensor, origin_xy = _rescale_make_motion_basis_axis_rgb_tensor_cam_to_world(
+                        rgb_tensor=pixel_values["siglip"].to('cpu'),                  # (B, 3,H,W)
+                        cam_to_world=plucker_extrinsic_tensor,                  # cam_pose = cam_to_world (고정)
+                        intrinsic_matrix=intrinsic_tensor,
+                        robot_eef_abs_poses=state[:, :7],  # eef pose (B, 7)
+                        origin_robot=True,
+                        origin_fallback="pp",
+                        arrow_len=60,
+                        return_overlay=False,
+                    )
+                    # save_rgb_image(pixel_values["siglip"].to('cpu'), "basis_rescale.png")
+                pixel_values['basis'] = axis_tensor.to('cuda', non_blocking=True)
+
 
         return dict(pixel_values=pixel_values, input_ids=input_ids, labels=labels, dataset_name=dataset_name)
 
