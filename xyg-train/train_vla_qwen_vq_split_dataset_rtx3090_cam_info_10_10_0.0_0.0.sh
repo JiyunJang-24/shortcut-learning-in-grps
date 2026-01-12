@@ -12,10 +12,10 @@ conda activate shortcut-learning
 
 # Next we train MiniVLA based on this Prism base VLM on LIBERO-90.
 # Run from the root of the repository
-DATA_MIX="v-1.000-1.000_num1"
+DATA_MIX="v-1.000-1.000_num_1_5"
 # 判断路径是否存在, LIBERO_DATA_ROOT
-# LIBERO_DATA_ROOT="/root/Desktop/workspace/jiyun/shortcut-learning-in-grps/dataset_git/libero_spatial_no_noops_island_1_rlds/cam_info_10_10_0.0_0.0"
-LIBERO_DATA_ROOT="/data1/local/shortcut-learning-in-grps/dataset_git/libero_spatial_no_noops_island_1_rlds/cam_info_10_10_0.0_0.0"
+LIBERO_DATA_ROOT="/home/kwonmc/jiyun/shortcut-learning-in-grps/dataset_git/libero_spatial_no_noops_island_1_rlds/cam_info_10_10_max_30.0_interv_15.0"
+# LIBERO_DATA_ROOT="/data1/local/shortcut-learning-in-grps/dataset_git/libero_spatial_no_noops_island_1_rlds/cam_info_10_10_0.0_0.0"
 if [ -e ${LIBERO_DATA_ROOT} ] ; then
     echo "LIBERO_PATH=${LIBERO_DATA_ROOT}"
 else
@@ -24,18 +24,18 @@ else
 fi
 
 LOG_ROOT="libero_qwen_pretrain_split_${DATA_MIX}"
-WANDB_PROJECT="libero_qwen_pretrain_split_${DATA_MIX}_debug"
+WANDB_PROJECT="libero_qwen_pretrain_split_${DATA_MIX}_miniVLA_basis"
 WANDB_ENTITY="DynamicVLA" # should be you user name or team name in w&b account
 
-max_steps=10000
-WORLD_SIZE=1
-BATCH_SIZE=1
-CUDA_VISIBLE_DEVICES_LIST="3"
+max_steps=110000
+WORLD_SIZE=4
+BATCH_SIZE=32
+CUDA_VISIBLE_DEVICES_LIST="0,1,2,3"
 
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_LIST}"
 
 # CKPT_PATH='/home/xingyouguang/.cache/huggingface/hub/models--Stanford-ILIAD--prism-qwen25-extra-dinosiglip-224px-0_5b/snapshots/5cfd2cc6da00c06e0be7abf35d43ec792d8e9498'
-CKPT_PATH='miniVLA'
+CKPT_PATH='/home/kwonmc/jiyun/shortcut-learning-in-grps/miniVLA'
 OMP_NUM_THREADS=4 torchrun --standalone --nnodes 1 --nproc-per-node "${WORLD_SIZE}" --master-addr=${MASTER_ADDR} --master-port=${MASTER_PORT} vla-scripts/train.py \
   --vla.type "prism-qwen25-dinosiglip-plucker-224px+0_5b+mx-libero-spatial" \
   --vla.data_mix "${DATA_MIX}" \
@@ -45,10 +45,10 @@ OMP_NUM_THREADS=4 torchrun --standalone --nnodes 1 --nproc-per-node "${WORLD_SIZ
   --vla.global_batch_size "$((${BATCH_SIZE} * ${WORLD_SIZE}))" \
   --vla.per_device_batch_size "${BATCH_SIZE}" \
   --vla.max_steps "${max_steps}" \
-  --image_aug False \
+  --image_aug false \
   --data_root_dir "${LIBERO_DATA_ROOT}" \
   --run_root_dir "${LOG_ROOT}" \
   --wandb_project "${WANDB_PROJECT}" \
   --wandb_entity "${WANDB_ENTITY}" \
-  --is_resume False \
-  --mode "basis"
+  --is_resume false \
+  --mode "plucker"
