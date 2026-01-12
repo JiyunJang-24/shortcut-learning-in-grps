@@ -206,7 +206,7 @@ class RLDSDataset(IterableDataset):
             mixture_spec,
             load_camera_views=load_camera_views,
             load_depth=False,
-            load_proprio=mode == "basis",
+            load_proprio=mode == "basis" or mode == "basis_rescale",
             load_language=True,
             action_proprio_normalization_type=NormalizationType.BOUNDS_Q99,
         )
