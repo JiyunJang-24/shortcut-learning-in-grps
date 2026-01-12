@@ -12,7 +12,7 @@ conda activate shortcut-learning
 ROOT="/data1/local/shortcut-learning-in-grps"
 CUR_PATH="${ROOT}"                              # 루트 기준으로 고정
 BUILDER_DIR="${ROOT}/dataset_git/rlds_dataset_builder/LIBERO_Spatial_XYG_cam_info"
-username="cam_info"
+username="vla_cam_info"
 libero_task_suite="libero_spatial"
 libero_raw_data_dir="${ROOT}/dataset_git/libero_spatial"
 libero_base_save_dir="${libero_raw_data_dir}_no_noops_island"
@@ -24,7 +24,7 @@ viewpoint_rotate=(0.0)
 vmin=1.00
 vmax=1.00
 num_tasks_in_suite=1
-specify_task_id_list=(0 1 2 3 4 5 6 7 8 9)
+specify_task_id_list=(0 4)
 number_demo_per_task=10
 demo_repeat_times=10
 

@@ -78,6 +78,7 @@ from lerobot.common.datasets.viz_utils import (
     _get_motion_dynamics_basis,
     _make_motion_basis_axis_rgb_tensor_cam_to_world,
     save_rgb_image,
+    _rescale_make_motion_basis_axis_rgb_tensor_cam_to_world,
 )
 # Append current directory so that interpreter can find experiments.robot
 sys.path.append("../..")
@@ -331,7 +332,8 @@ def eval_libero(cfg: GenerateConfig) -> None:
             else:
                 env = rotate_recolor_dataset.rotate_camera(env=env, camera_id=camera_id, camera_name=camera_name,
                                                            robot_base_name=robot_base_name, theta=viewpoint_rotate, debug=False)
-
+            env = rotate_recolor_dataset.reposition_camera(env=env, camera_id=camera_id, camera_name=camera_name, 
+                                                            robot_base_name=robot_base_name, scale=1.5, debug=False)
             # change the transparency of the transparent object
             # env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
 
@@ -395,18 +397,18 @@ def eval_libero(cfg: GenerateConfig) -> None:
                         elif cfg.use_dynamics_basis:
                             with torch.no_grad():
                                 motion_dynamics_basis = _get_motion_dynamics_basis(intrinsic_matrix, cam_to_world=plucker_extrinsic_matrix).reshape(-1)
-                                axis_tensor, origin_xy = _make_motion_basis_axis_rgb_tensor_cam_to_world(
+                                axis_tensor, origin_xy = _rescale_make_motion_basis_axis_rgb_tensor_cam_to_world(
                                     rgb_tensor=image.to('cpu'),                  # (B, 3,H,W)
-                                    motion_dynamics_basis=motion_dynamics_basis,
+                                    # motion_dynamics_basis=motion_dynamics_basis,
                                     cam_to_world=plucker_extrinsic_matrix,                  # cam_pose = cam_to_world (고정)
                                     intrinsic_matrix=intrinsic_matrix,
                                     robot_eef_abs_poses=state[:, -7:],  # eef pose (B, 7)
                                     origin_robot=True,
                                     origin_fallback="pp",
                                     arrow_len=60,
-                                    return_overlay=False,
+                                    return_overlay=True,
                                 ) # (B, 3, H, W)
-                                # save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
+                                save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
                                 # save_rgb_image(image[0].to('cpu'), "eef_overlay_out/origin_img.png")
                             image = torch.cat([image, axis_tensor.to('cuda')], dim=1)
                         # Create the policy input dictionary

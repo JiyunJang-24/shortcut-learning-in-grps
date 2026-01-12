@@ -17,7 +17,7 @@ export MUJOCO_GL=egl
 # angles=(0 22.5 45)
 # tasks=(0 4)       # 0=A, 4=B
 # seeds=(7 8 9)
-angles=(22.5)
+angles=(0.0)
 tasks=(0)       # 0=A, 4=B
 seeds=(14)
 export PYTHONUNBUFFERED=1

@@ -7,15 +7,15 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -
 REPO_ROOT="${SCRIPT_DIR}"
 export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 
-base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2026-01-06/19-16-31_DP_libero_10_plucker_ex1_angle_from_0_task_2"
+base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2026-01-07/19-37-40_DP_basis_panda_0_45_315_ur5_22.5_337.5_task_0"
 checkpoint_dir="${base_ckpt_dir}/checkpoints"
-checkpoint_step="050000"
+checkpoint_step="100000"
 ckpt_path="${checkpoint_dir}/${checkpoint_step}/pretrained_model"
 log_root="./logs-angle-test"
 export MUJOCO_GL=egl
-angles=(0)
-tasks=(2)       # 0=A, 4=B
-seeds=(7 8 9)
+angles=(0.0 5.0 10.0)
+tasks=(0)       # 0=A, 4=B
+seeds=(7)
 # angles=(0)
 # tasks=(0)       # 0=A, 4=B
 # seeds=(7)
@@ -32,7 +32,7 @@ for seed in "${seeds[@]}"; do
         python -u experiments/robot/libero/run_libero_eval_dp_minivla_cam_info.py \
           --model_family prismatic \
           --pretrained_checkpoint "${ckpt_path}" \
-          --task_suite_name libero_10 \
+          --task_suite_name libero_spatial \
           --prefix "angle_${angle}_task_${task}_seed_${seed}_$(basename "$base_ckpt_dir")_${checkpoint_step}" \
           --num_trials_per_task 25 \
           --num_tasks_in_suite 1 \
@@ -47,8 +47,8 @@ for seed in "${seeds[@]}"; do
           --specific_task_id "${task}" \
           --local_log_dir "${outdir}" \
           --seed "${seed}" \
-          --use_plucker true \
-          --use_dynamics_basis false
+          --use_plucker false \
+          --use_dynamics_basis true
       done
     done
   ) &

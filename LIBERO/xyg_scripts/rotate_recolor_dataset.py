@@ -130,7 +130,7 @@ def rotate_camera_based_on_robot_base(cur_camera_pos, cur_camera_quat, robot_bas
     return new_camera_world_pose.get_position(), new_camera_world_pose.get_orientation()
     
 
-def rotate_camera(env, camera_id, camera_name, robot_base_name="robot0_base", theta=0.0, debug=False):
+def rotate_camera(env, camera_id, camera_name, robot_base_name="robot0_base", theta=0.0, reposition_camera_scale=1.0, debug=False):
     cur_camera_pos = env.sim.model.cam_pos[camera_id].copy()
     cur_camera_quat = env.sim.model.cam_quat[camera_id].copy()
     robot_base_id = env.sim.model.body_name2id(robot_base_name)
@@ -150,7 +150,7 @@ def rotate_camera(env, camera_id, camera_name, robot_base_name="robot0_base", th
     env.sim.model.cam_pos[camera_id] = tgt_camera_pos
     env.sim.model.cam_quat[camera_id] = tgt_camera_quat
     env.sim.forward()
-    
+    env = reposition_camera(env, camera_name, camera_id, robot_base_name, scale=reposition_camera_scale, debug=debug)
     if debug:
         camera_img = env.sim.render(
             camera_name=camera_name,  # 指定相机名称
@@ -163,8 +163,57 @@ def rotate_camera(env, camera_id, camera_name, robot_base_name="robot0_base", th
         Image.fromarray(camera_img[::-1]).save(os.path.join(IMAGE_SAVE_PATH, f"rotate_{theta:.2f}.png"))
     return env
 
+def reposition_camera(
+        env,
+        camera_name: str,
+        camera_id: int,
+        robot_base_name: str = "robot0_base",
+        scale: float = 0.85,          # 0.85면 베이스 쪽으로 15% 가까워짐, 1.15면 15% 멀어짐
+        debug: bool = False,
+    ):
+    # --- target(base) world pos ---
+    base_id = env.sim.model.body_name2id(robot_base_name)
+    base_pos_w = env.sim.data.xpos[base_id].copy()   # world
 
-def rotate_camera_ur5e(env, ur5e_env, camera_id, camera_name, robot_base_name="robot0_base", theta=0.0, debug=False):
+    # --- camera current world pos ---
+    cam_bodyid = int(env.sim.model.cam_bodyid[camera_id])
+    if cam_bodyid == -1:
+        # camera is defined in world frame
+        cam_pos_w = env.sim.model.cam_pos[camera_id].copy()
+    else:
+        # camera is defined in cam_body local frame -> convert local -> world
+        body_pos_w = env.sim.data.xpos[cam_bodyid].copy()
+        body_R_w = env.sim.data.xmat[cam_bodyid].reshape(3, 3).copy()
+        cam_pos_local = env.sim.model.cam_pos[camera_id].copy()
+        cam_pos_w = body_pos_w + body_R_w @ cam_pos_local
+
+    # --- move along line: base + scale*(cam-base) ---
+    v = cam_pos_w - base_pos_w
+    new_cam_pos_w = base_pos_w + scale * v
+
+    # --- write back to model.cam_pos (world or local depending on cam_bodyid) ---
+    if cam_bodyid == -1:
+        env.sim.model.cam_pos[camera_id] = new_cam_pos_w
+    else:
+        body_pos_w = env.sim.data.xpos[cam_bodyid].copy()
+        body_R_w = env.sim.data.xmat[cam_bodyid].reshape(3, 3).copy()
+        new_cam_pos_local = body_R_w.T @ (new_cam_pos_w - body_pos_w)
+        env.sim.model.cam_pos[camera_id] = new_cam_pos_local
+
+    env.sim.forward()
+    if debug:
+        camera_img = env.sim.render(
+            camera_name=camera_name,  # 指定相机名称
+            width=IMAGE_RESOLUTION,                  # 图像宽度
+            height=IMAGE_RESOLUTION,                 # 图像高度
+            depth=False,                # 是否需要深度图
+            mode='offscreen'            # 离屏渲染模式
+        )
+        
+        Image.fromarray(camera_img[::-1]).save(os.path.join(IMAGE_SAVE_PATH, f"scale_{scale:.2f}.png"))
+    return env
+
+def rotate_camera_ur5e(env, ur5e_env, camera_id, camera_name, robot_base_name="robot0_base", theta=0.0, reposition_camera_scale=1.0, debug=False):
     cur_camera_pos = env.sim.model.cam_pos[camera_id].copy()
     cur_camera_quat = env.sim.model.cam_quat[camera_id].copy()
     robot_base_id = env.sim.model.body_name2id(robot_base_name)
@@ -183,6 +232,15 @@ def rotate_camera_ur5e(env, ur5e_env, camera_id, camera_name, robot_base_name="r
     
     ur5e_env.sim.model.cam_pos[camera_id] = tgt_camera_pos
     ur5e_env.sim.model.cam_quat[camera_id] = tgt_camera_quat
+    ur5e_env.sim.forward()
+    
+    env.sim.model.cam_pos[camera_id] = tgt_camera_pos
+    env.sim.model.cam_quat[camera_id] = tgt_camera_quat
+    env.sim.forward()
+
+    env = reposition_camera(env, camera_name, camera_id, robot_base_name, scale=reposition_camera_scale, debug=debug)
+    ur5e_env.sim_model.cam_pos[camera_id] = env.sim.model.cam_pos[camera_id].copy()
+    ur5e_env.sim.model.cam_quat[camera_id] = env.sim.model.cam_quat[camera_id].copy()
     ur5e_env.sim.forward()
     
     if debug:

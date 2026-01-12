@@ -7,17 +7,17 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -
 REPO_ROOT="${SCRIPT_DIR}"
 export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 
-base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2026-01-04/15-03-58_DP_panda_0_ur5_22.5_task_0"
+base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2026-01-08/21-12-17_DP_panda_0_45_315_ur5_22.5_337.5_task_0"
 checkpoint_dir="${base_ckpt_dir}/checkpoints"
-checkpoint_step="030000"
+checkpoint_step="100000"
 ckpt_path="${checkpoint_dir}/${checkpoint_step}/pretrained_model"
 log_root="./logs-angle-test-ur5e"
 export MUJOCO_GL=egl
 # export MUJOCO_EGL_DEVICE_ID=3
 # angles=(0 22.5 45)
 # tasks=(0 4)       # 0=A, 4=B
-seeds=(7 8 9)
-angles=(22.5 0)
+seeds=(12)
+angles=(22.5)
 tasks=(0)       # 0=A, 4=B
 # seeds=(14)
 export PYTHONUNBUFFERED=1
@@ -50,7 +50,7 @@ for seed in "${seeds[@]}"; do
           --seed "${seed}" \
           --use_plucker false \
           --use_dynamics_basis false \
-          --robot "UR5e" \
+          --robot "Panda" \
           --gripper_type "default"
       done
     done
