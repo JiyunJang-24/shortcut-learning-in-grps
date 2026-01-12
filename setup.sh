@@ -22,7 +22,7 @@ cd LIBERO
 pip install -e .
 cd ..
 pip install -r experiments/robot/libero/libero_requirements.txt
-pip install opencv-python numpy==1.26.4
+pip install opencv-python==4.11.0.86 numpy==1.26.4
 
 # LeRobot (for dataset format conversion)
 git clone https://github.com/Lucky-Light-Sun/lerobot.git

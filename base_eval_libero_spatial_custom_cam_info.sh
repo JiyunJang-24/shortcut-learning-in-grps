@@ -7,20 +7,15 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -
 REPO_ROOT="${SCRIPT_DIR}"
 export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 
-base_ckpt_dir="${REPO_ROOT}/logs/2026-1-7/23-26-36_libero_qwen_pretrain_split_v-1.000-1.000_entire/prism-qwen25-dinosiglip-plucker-224px+0_5b+mx-libero-spatial+n0+b48+x7"
+base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2026-01-06/19-16-31_DP_libero_10_plucker_ex1_angle_from_0_task_2"
 checkpoint_dir="${base_ckpt_dir}/checkpoints"
-checkpoint_name="step-010000-epoch-07-loss=0.4346.pt"
-
-# If Checkpoint Path points at a file, the path should look like `.../<RUN_ID>/checkpoints/<CHECKPOINT_PATH>.pt`
-# Then, config.json should be in the parent folder of ckpt_path
-# prismatic/models/load.py#L147
-ckpt_path="${checkpoint_dir}/${checkpoint_name}"
-
-log_root="./logs/eval/miniVLA-vanilla"
+checkpoint_step="050000"
+ckpt_path="${checkpoint_dir}/${checkpoint_step}/pretrained_model"
+log_root="./logs-angle-test"
 export MUJOCO_GL=egl
 angles=(0)
-tasks=(0 1 2 3 4 5 6 7 8 9)       # 0=A, 4=B
-seeds=(7)
+tasks=(2)       # 0=A, 4=B
+seeds=(7 8 9)
 # angles=(0)
 # tasks=(0)       # 0=A, 4=B
 # seeds=(7)
@@ -37,8 +32,8 @@ for seed in "${seeds[@]}"; do
         python -u experiments/robot/libero/run_libero_eval_dp_minivla_cam_info.py \
           --model_family prismatic \
           --pretrained_checkpoint "${ckpt_path}" \
-          --task_suite_name libero_spatial \
-          --prefix "angle_${angle}_task_${task}_seed_${seed}_$(basename "$base_ckpt_dir")_${checkpoint_name}" \
+          --task_suite_name libero_10 \
+          --prefix "angle_${angle}_task_${task}_seed_${seed}_$(basename "$base_ckpt_dir")_${checkpoint_step}" \
           --num_trials_per_task 25 \
           --num_tasks_in_suite 1 \
           --use_wandb true \

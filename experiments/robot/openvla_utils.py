@@ -43,6 +43,7 @@ def get_prismatic_vla(cfg):
         cfg.pretrained_checkpoint,
         hf_token=hf_token,
         load_for_training=False,
+        mode=cfg.mode
     )
     for param in vla.parameters():
         assert param.dtype == torch.float32, f"Loaded VLM parameter not in full precision: {param}"

@@ -379,7 +379,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                                            robot_base_name=robot_base_name, theta=viewpoint_rotate, debug=False)
             
             # change the transparency of the transparent object
-            env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
+            # env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
             
             # Set initial states
             obs = env.set_init_state(initial_states[episode_idx])

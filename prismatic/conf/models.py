@@ -528,6 +528,10 @@ class Prism_Qwen25_0_5B_Extra_DINOSigLIP_Plucker_224px(Prism_Qwen25_0_5B_Extra_D
     model_id: str = "prism-qwen25-extra-dinosiglip-plucker-224px+0_5b"
     vision_backbone_id: str = "dinosiglip-plucker-vit-so-224px"
 
+@dataclass
+class Prism_Qwen25_0_5B_Extra_DINOSigLIP_Basis_224px(Prism_Qwen25_0_5B_Extra_DINOSigLIP_224px):
+    model_id: str = "prism-qwen25-extra-dinosiglip-basis-224px+0_5b"
+    vision_backbone_id: str = "dinosiglip-basis-vit-so-224px"
 
 
 # === Define a Model Registry Enum for Reference & Validation ===
@@ -613,7 +617,8 @@ class ModelRegistry(Enum):
 
     # Plucker
     PRISM_QWEN25_EXTRA_DINOSIGLIP_PLUCKER_224PX_0_5B = Prism_Qwen25_0_5B_Extra_DINOSigLIP_Plucker_224px
-
+    # Basis
+    PRISM_QWEN25_EXTRA_DINOSIGLIP_BASIS_224PX_0_5B = Prism_Qwen25_0_5B_Extra_DINOSigLIP_Basis_224px
     @property
     def model_id(self) -> str:
         return self.value.model_id
