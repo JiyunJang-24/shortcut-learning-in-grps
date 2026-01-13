@@ -345,7 +345,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
             env = rotate_recolor_dataset.reposition_camera(env=env, camera_id=camera_id, camera_name=camera_name,
                                                             robot_base_name=robot_base_name, scale=cfg.camera_scale, debug=False)
             # change the transparency of the transparent object
-            if cfg.for_dp:
+            if cfg.model_family == "diffusion":
                 try:
                     env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
                 except:
