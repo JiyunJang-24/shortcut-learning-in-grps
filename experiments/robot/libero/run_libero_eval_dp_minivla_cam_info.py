@@ -394,21 +394,37 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                 plucker_tensor = einops.rearrange(plucker_data['plucker'], 's h w c -> s c h w').to('cuda', non_blocking=True)
                             image = torch.cat([image, plucker_tensor], dim=1)
 
-                        elif cfg.use_dynamics_basis:
+                        elif cfg.use_dynamics_basis and cfg.apply_basis_scale == False:
                             with torch.no_grad():
                                 motion_dynamics_basis = _get_motion_dynamics_basis(intrinsic_matrix, cam_to_world=plucker_extrinsic_matrix).reshape(-1)
-                                axis_tensor, origin_xy = _rescale_make_motion_basis_axis_rgb_tensor_cam_to_world(
+                                axis_tensor, origin_xy = _make_motion_basis_axis_rgb_tensor_cam_to_world(
                                     rgb_tensor=image.to('cpu'),                  # (B, 3,H,W)
-                                    # motion_dynamics_basis=motion_dynamics_basis,
+                                    motion_dynamics_basis=motion_dynamics_basis,
                                     cam_to_world=plucker_extrinsic_matrix,                  # cam_pose = cam_to_world (고정)
                                     intrinsic_matrix=intrinsic_matrix,
                                     robot_eef_abs_poses=state[:, -7:],  # eef pose (B, 7)
                                     origin_robot=True,
                                     origin_fallback="pp",
                                     arrow_len=60,
-                                    return_overlay=True,
+                                    return_overlay=False,
                                 ) # (B, 3, H, W)
-                                save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
+                                # save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
+                                # save_rgb_image(image[0].to('cpu'), "eef_overlay_out/origin_img.png")
+                            image = torch.cat([image, axis_tensor.to('cuda')], dim=1)
+
+                        elif cfg.use_dynamics_basis and cfg.apply_basis_scale:
+                            with torch.no_grad():
+                                axis_tensor, origin_xy = _rescale_make_motion_basis_axis_rgb_tensor_cam_to_world(
+                                    rgb_tensor=image.to('cpu'),                  # (B, 3,H,W)
+                                    cam_to_world=plucker_extrinsic_matrix,                  # cam_pose = cam_to_world (고정)
+                                    intrinsic_matrix=intrinsic_matrix,
+                                    robot_eef_abs_poses=state[:, -7:],  # eef pose (B, 7)
+                                    origin_robot=True,
+                                    origin_fallback="pp",
+                                    arrow_len=60,
+                                    return_overlay=False,
+                                ) # (B, 3, H, W)
+                                # save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
                                 # save_rgb_image(image[0].to('cpu'), "eef_overlay_out/origin_img.png")
                             image = torch.cat([image, axis_tensor.to('cuda')], dim=1)
                         # Create the policy input dictionary
