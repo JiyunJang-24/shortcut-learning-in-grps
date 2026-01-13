@@ -38,6 +38,7 @@ from prismatic.training import VLAMetrics, get_train_strategy
 from prismatic.util import set_global_seed
 from prismatic.vla import get_vla_dataset_and_collator
 from prismatic.vla.datasets.rlds.utils.data_utils import save_dataset_statistics
+from train_utils import get_run_id
 
 # Sane Defaults
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -128,11 +129,9 @@ def train(cfg: TrainConfig) -> None:
 
     # Configure Unique Run Name & Save Directory
     vla_id = cfg.vla.vla_id
-    cfg.run_id = (
-        f"{vla_id}+n{cfg.vla.expected_world_size // 8}+b{cfg.per_device_batch_size}+x{cfg.seed}"
-        if cfg.run_id is None
-        else cfg.run_id
-    )
+    if cfg.run_id is None:
+        cfg.run_id = get_run_id(cfg)
+
     if cfg.run_id_note is not None:
         cfg.run_id += f"--{cfg.run_id_note}"
     if cfg.image_aug:
