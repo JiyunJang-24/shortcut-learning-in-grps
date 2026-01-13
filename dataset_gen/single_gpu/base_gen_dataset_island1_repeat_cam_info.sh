@@ -22,7 +22,7 @@ export PYTHONPATH="${ROOT}/LIBERO:${PYTHONPATH}"
 
 # viewpoint_rotate=(0.0 22.5 45.0 315.0 338.5 90.0 270.0)
 # viewpoint_rotate=(0.0 15.0 30.0 345.0 330.0)
-viewpoint_rotate=(315.0 337.5)
+viewpoint_rotate=(22.5)
 vmin=1.00
 vmax=1.00
 num_tasks_in_suite=1

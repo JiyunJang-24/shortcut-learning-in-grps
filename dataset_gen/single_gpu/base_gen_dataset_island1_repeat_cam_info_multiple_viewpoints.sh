@@ -9,10 +9,10 @@ source "$CONDA_BASE/etc/profile.d/conda.sh"
 conda activate shortcut-learning
 
 # 절대경로 고정
-ROOT="/root/Desktop/workspace/jiyun/shortcut-learning-in-grps"
+ROOT="/data1/local/shortcut-learning-in-grps"
 CUR_PATH="${ROOT}"                              # 루트 기준으로 고정
 BUILDER_DIR="${ROOT}/dataset_git/rlds_dataset_builder/LIBERO_Spatial_XYG_cam_info"
-username="cam_info"
+username="vla_cam_info"
 libero_task_suite="libero_spatial"
 libero_raw_data_dir="${ROOT}/dataset_git/libero_spatial"
 libero_base_save_dir="${libero_raw_data_dir}_no_noops_island"
@@ -24,10 +24,10 @@ specify_task_id_list="(0 4)"
 number_demo_per_task=10
 demo_repeat_times=10
 
-max_viewpoint_rotate=30.0
+max_viewpoint_rotate=45.0
 vmin=1.00
 vmax=1.00
-viewpoint_interval=15.0
+viewpoint_interval=22.5
 
 # TFDS가 커스텀 빌더를 볼 수 있도록 보장
 export PYTHONPATH="${PYTHONPATH:-}:${ROOT}/dataset_git/rlds_dataset_builder"
