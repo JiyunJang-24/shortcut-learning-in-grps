@@ -5,14 +5,19 @@ from .Config import GenerateConfig
 def validate_ckpt(cfg: GenerateConfig) -> None:
     """Validate ckpt path & mode selection"""
 
-    if "plucker" in str(cfg.pretrained_checkpoint):
-        assert cfg.vla_mode == "plucker", f"[Error] Expected to be run in `plucker` mode, but invalid mode argument: {cfg.vla_mode}!"
+    if cfg.model_family == "prismatic":
+        ckpt_path = str(cfg.pretrained_checkpoint)
+        if cfg.vla_mode == "vanilla":
+            for mode in ["plucker", "basis", "basis-rescale"]:
+                assert mode not in ckpt_path, f"[Error] Expected `vanilla` mode, but found `{mode}` in checkpoint path!"
+        else:
+            assert cfg.vla_mode in ckpt_path, (
+                f"[Error] Expected `{cfg.vla_mode}` mode, but it was not found in checkpoint path!"
+            )
 
-    if "basis" in str(cfg.pretrained_checkpoint):
-        assert "basis" in cfg.vla_mode, f"[Error] Expected to be run in `basis` mode, but invalid mode argument: {cfg.vla_mode}!"
-
-    if "plucker" not in str(cfg.pretrained_checkpoint) and "basis" not in str(cfg.pretrained_checkpoint):
-        assert cfg.vla_mode == "vanilla", f"[Error] Expected to be run in `vanilla` mode, but invalid mode argument: {cfg.vla_mode}!"
+    elif cfg.model_family == "diffusion":
+        # Todo
+        pass
 
     print(f"CKPT PATH: {cfg.pretrained_checkpoint}")
 
