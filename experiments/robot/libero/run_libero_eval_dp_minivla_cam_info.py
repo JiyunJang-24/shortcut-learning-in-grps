@@ -61,6 +61,7 @@ import json
 import sys
 import time
 import glob
+from typing import Optional
 import einops
 import draccus
 import numpy as np
@@ -70,11 +71,12 @@ import torch
 import wandb
 import shutil
 from robosuite.utils import camera_utils as CU
-from lerobot.common.datasets.camera_utils import (
+from lerobot.lerobot.common.datasets.camera_utils import (
     PluckerEmbedder,
-    remove_extrinsic_camera_axis_correction
+    remove_extrinsic_camera_axis_correction,
+    intrinsic_image_size_calibration
 )
-from lerobot.common.datasets.viz_utils import (
+from lerobot.lerobot.common.datasets.viz_utils import (
     _get_motion_dynamics_basis,
     _make_motion_basis_axis_rgb_tensor_cam_to_world,
     save_rgb_image,
@@ -100,7 +102,9 @@ from experiments.robot.robot_utils import (
     normalize_gripper_action,
     set_seed_everywhere,
 )
-from experiments.robot.libero.eval_utils import GenerateConfig, validate_cli_args
+from experiments.robot.libero.eval_utils import (
+    GenerateConfig, validate_cli_args, _calculate_vla_additional_inputs, _get_intrinsic_and_extrinsic
+    )
 import sys
 if os.getcwd() not in sys.path:
     sys.path.append(os.getcwd())
@@ -145,6 +149,9 @@ def check_eval_finish(local_log_filepath):
         if len(lines) > 0 and "Total time taken: " in lines[-1]:
             return True, similar_txt_file
     return False, similar_txt_file
+
+
+
 
 
 
@@ -218,6 +225,9 @@ def eval_libero(cfg: GenerateConfig) -> None:
             # Hard Coded ... SRY
             elif "v-1.000-1.000_entire/libero_spatial" in model.norm_stats:
                 cfg.unnorm_key = "v-1.000-1.000_entire/libero_spatial"
+            elif "v-1.000-1.000_num_1_5/libero_spatial" in model.norm_stats:
+                cfg.unnorm_key = "v-1.000-1.000_num_1_5/libero_spatial"
+
             assert cfg.unnorm_key in model.norm_stats, f"Action un-norm key {cfg.unnorm_key} not found in VLA `norm_stats`!"
 
     # [OpenVLA] Get Hugging Face processor
@@ -332,7 +342,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
             else:
                 env = rotate_recolor_dataset.rotate_camera(env=env, camera_id=camera_id, camera_name=camera_name,
                                                            robot_base_name=robot_base_name, theta=viewpoint_rotate, debug=False)
-            env = rotate_recolor_dataset.reposition_camera(env=env, camera_id=camera_id, camera_name=camera_name, 
+            env = rotate_recolor_dataset.reposition_camera(env=env, camera_id=camera_id, camera_name=camera_name,
                                                             robot_base_name=robot_base_name, scale=cfg.camera_scale, debug=False)
             # change the transparency of the transparent object
             if cfg.for_dp:
@@ -473,22 +483,6 @@ def eval_libero(cfg: GenerateConfig) -> None:
                             image_history = [val for tup in zip(image_history, wrist_image_history) for val in tup]
 
 
-                        if cfg.use_plucker:
-                            intrinsic_matrix = torch.from_numpy(CU.get_camera_intrinsic_matrix(env.sim, camera_name, height, width)).float()
-                            extrinsic_matrix = torch.from_numpy(CU.get_camera_extrinsic_matrix(env.sim, camera_name)).float()
-                            plucker_extrinsic_matrix = remove_extrinsic_camera_axis_correction(extrinsic_matrix)
-
-                            plucker_embedder = PluckerEmbedder(img_size=height, device='cpu')
-
-                            with torch.no_grad():
-                                intrinsic_tensor = intrinsic_matrix.unsqueeze(0)
-                                extrinsic_tensor = plucker_extrinsic_matrix.unsqueeze(0)
-                                plucker_data = plucker_embedder(intrinsic_tensor, extrinsic_tensor)
-                                plucker_tensor = einops.rearrange(plucker_data['plucker'], 's h w c -> s c h w').to('cuda', non_blocking=True)
-
-                        else:
-                            plucker_tensor = None
-
                         # Prepare observations dict
                         # Note: OpenVLA does not take proprio state as input
                         observation = {
@@ -498,8 +492,17 @@ def eval_libero(cfg: GenerateConfig) -> None:
                             )
                         }
 
-                        if plucker_tensor is not None:
-                            observation["plucker"] = plucker_tensor
+                        intrinsic, extrinsic = _get_intrinsic_and_extrinsic(
+                            env=env, camera_name=camera_name, height=height, width=width, batchwise=cfg.vla_mode == "plucker"
+                        )
+                        additional_input = _calculate_vla_additional_inputs(
+                            cfg.vla_mode,
+                            intrinsic_matrix=intrinsic,
+                            extrinsic_matrix=extrinsic,
+                            img=img,
+                            state=observation["state"]
+                        )
+                        observation = observation | additional_input
 
                         # Query model to get action
                         action = get_action(
@@ -596,3 +599,4 @@ def eval_libero(cfg: GenerateConfig) -> None:
 
 if __name__ == "__main__":
     eval_libero()
+

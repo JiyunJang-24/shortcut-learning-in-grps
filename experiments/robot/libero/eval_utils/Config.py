@@ -68,4 +68,4 @@ class GenerateConfig:
     apply_basis_scale: bool = False
     camera_scale: float = 1.0
     for_dp: bool = True
-    mode: str = "vanilla"
+    vla_mode: str = "vanilla"
