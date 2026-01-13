@@ -48,7 +48,11 @@ for seed in "${seeds[@]}"; do
           --local_log_dir "${outdir}" \
           --seed "${seed}" \
           --use_plucker false \
-          --use_dynamics_basis true
+          --use_dynamics_basis true \
+          --apply_basis_scale true \
+          --mode "basis" \
+          --for_dp true \
+          --camera_scale 1.0
       done
     done
   ) &
