@@ -53,6 +53,7 @@ class DinoSigLIPViTBackbone(VisionBackbone):
         image_resize_strategy: str,
         default_image_size: int = 224,
         image_sequence_len: int = 1,
+        mode: str = "vanilla",
     ) -> None:
         super().__init__(
             vision_backbone_id,
@@ -149,6 +150,23 @@ class DinoSigLIPViTBackbone(VisionBackbone):
 
         else:
             raise ValueError(f"Image Resize Strategy `{self.image_resize_strategy}` is not supported!")
+        self.mode = mode
+        if self.mode == "basis_rescale_concat" or self.mode == "basis_concat":
+            self.dino_featurizer.patch_embed.proj = expand_in_channels_keep_rgb(
+                self.dino_featurizer.patch_embed.proj, new_in_chans=6,
+            )
+            self.siglip_featurizer.patch_embed.proj = expand_in_channels_keep_rgb(
+                self.siglip_featurizer.patch_embed.proj, new_in_chans=6,
+            )
+            print("DinoSigLIPViTBackbone: Expanded in_channels to 6 for basis-rescale-based input!")
+        elif self.mode == "plucker_concat":
+            self.dino_featurizer.patch_embed.proj = expand_in_channels_keep_rgb(
+                self.dino_featurizer.patch_embed.proj, new_in_chans=9,
+            )
+            self.siglip_featurizer.patch_embed.proj = expand_in_channels_keep_rgb(
+                self.siglip_featurizer.patch_embed.proj, new_in_chans=9,
+            )
+            print("DinoSigLIPViTBackbone: Expanded in_channels to 9 for plucker-based input!")
 
     def get_fsdp_wrapping_policy(self) -> Callable:
         """Return a simple FSDP policy that wraps each ViT block and then both of the _entire_ featurizers."""
@@ -186,3 +204,38 @@ class DinoSigLIPViTBackbone(VisionBackbone):
     @property
     def half_precision_dtype(self) -> torch.dtype:
         return torch.bfloat16
+
+import torch.nn as nn
+
+def expand_in_channels_keep_rgb(conv: nn.Conv2d, new_in_chans: int,) -> nn.Conv2d:
+    """
+    conv: 기존 Conv2d (in_chans=3)
+    new_in_chans: 예) 6
+    """
+    assert isinstance(conv, nn.Conv2d)
+    old_w = conv.weight.data
+    old_b = conv.bias.data if conv.bias is not None else None
+
+    old_in = conv.in_channels
+    assert new_in_chans >= old_in
+
+    new_conv = nn.Conv2d(
+        in_channels=new_in_chans,
+        out_channels=conv.out_channels,
+        kernel_size=conv.kernel_size,
+        stride=conv.stride,
+        padding=conv.padding,
+        dilation=conv.dilation,
+        groups=conv.groups,
+        bias=(conv.bias is not None),
+        padding_mode=conv.padding_mode,
+    ).to(device=old_w.device, dtype=old_w.dtype)
+
+    with torch.no_grad():
+        # 1) RGB(기존 3채널) weight 복사
+        new_conv.weight[:, :old_in, :, :].copy_(old_w)
+        # 2) bias 복사
+        if old_b is not None:
+            new_conv.bias.copy_(old_b)
+
+    return new_conv

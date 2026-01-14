@@ -4,8 +4,9 @@ class TrainingMode(Enum):
     VANILLA = "vanilla"
     PLUCKER = "plucker"
     BASIS = "basis"
-    BASIS_RESCALED = "basis-rescaled"
-
+    BASIS_RESCALED = "basis_rescale"
+    BASIS_RESCALED_CONCAT = "basis_rescale_concat"
+    PLUCKER_CONCAT = "plucker_concat"
 def get_run_id(cfg) -> str:
     """
     Generates a unique run ID based on the training configuration.

@@ -163,6 +163,28 @@ class RLDSBatchTransform:
                     )
                     # save_rgb_image(pixel_values["siglip"].to('cpu'), "basis_rescale.png")
                 pixel_values['basis'] = axis_tensor.to('cuda', non_blocking=True)
+            elif self.mode == "basis_rescale_concat":
+                with torch.no_grad():
+                    state = rlds_batch["observation"]["eef_state"]
+                    axis_tensor, origin_xy = _rescale_make_motion_basis_axis_rgb_tensor_cam_to_world(
+                        rgb_tensor=pixel_values["siglip"],                  # (B, 3,H,W)
+                        cam_to_world=plucker_extrinsic_tensor,                  # cam_pose = cam_to_world (고정)
+                        intrinsic_matrix=intrinsic_tensor,
+                        robot_eef_abs_poses=state[:, :7],  # eef pose (B, 7)
+                        origin_robot=True,
+                        origin_fallback="pp",
+                        arrow_len=60,
+                        return_overlay=False,
+                    )
+                    pixel_values['dino'] = torch.cat([pixel_values['dino'], axis_tensor], dim=0)
+                    pixel_values['siglip'] = torch.cat([pixel_values['siglip'], axis_tensor], dim=0)
+            elif self.mode == "plucker_concat":
+                with torch.no_grad():
+                    plucker_embedder = PluckerEmbedder(img_size=img_size, device='cpu')
+                    plucker_data = plucker_embedder(intrinsic_tensor, plucker_extrinsic_tensor)
+                    plucker_tensor = einops.rearrange(plucker_data['plucker'], 'h w c -> c h w')
+                pixel_values['dino'] = torch.cat([pixel_values['dino'], plucker_tensor], dim=0)
+                pixel_values['siglip'] = torch.cat([pixel_values['siglip'], plucker_tensor], dim=0)
 
 
         return dict(pixel_values=pixel_values, input_ids=input_ids, labels=labels, dataset_name=dataset_name)
@@ -206,7 +228,7 @@ class RLDSDataset(IterableDataset):
             mixture_spec,
             load_camera_views=load_camera_views,
             load_depth=False,
-            load_proprio=mode == "basis" or mode == "basis_rescale",
+            load_proprio=(mode == "basis") or (mode == "basis_rescale") or (mode == "basis_rescale_concat"),
             load_language=True,
             action_proprio_normalization_type=NormalizationType.BOUNDS_Q99,
         )

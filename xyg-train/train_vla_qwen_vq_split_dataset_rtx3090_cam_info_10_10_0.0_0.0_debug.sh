@@ -24,13 +24,13 @@ else
 fi
 
 LOG_ROOT="libero_qwen_pretrain_split_${DATA_MIX}"
-WANDB_PROJECT="libero_qwen_pretrain_split_${DATA_MIX}_miniVLA_basis_rescale_concat"
+WANDB_PROJECT="libero_qwen_pretrain_split_${DATA_MIX}_miniVLA_vanilla"
 WANDB_ENTITY="DynamicVLA" # should be you user name or team name in w&b account
 
-max_steps=75000
-WORLD_SIZE=4
-BATCH_SIZE=32
-CUDA_VISIBLE_DEVICES_LIST="0,1,2,3"
+max_steps=110000
+WORLD_SIZE=1
+BATCH_SIZE=2
+CUDA_VISIBLE_DEVICES_LIST="0"
 
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_LIST}"
 

@@ -181,7 +181,6 @@ def train(cfg: TrainConfig) -> None:
         vlm = load(
             cfg.vla.base_vlm, hf_token=hf_token, load_for_training=True, image_sequence_len=cfg.image_sequence_len, mode=cfg.mode
         )
-
     # [Validate] Model should be in Full Precision!
     for param in vlm.parameters():
         assert param.dtype == torch.float32, f"Loaded VLM parameter not in full precision: {param}"
