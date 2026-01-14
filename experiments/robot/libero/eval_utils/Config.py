@@ -65,5 +65,6 @@ class GenerateConfig:
     specific_task_id: int = None
     use_plucker: bool = False
     use_dynamics_basis: bool = False
-
-    mode: str = "vanilla"
+    apply_basis_scale: bool = False
+    camera_scale: float = 1.0
+    vla_mode: str = "vanilla"

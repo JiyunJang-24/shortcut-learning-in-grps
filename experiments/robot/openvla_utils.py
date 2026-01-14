@@ -43,7 +43,7 @@ def get_prismatic_vla(cfg):
         cfg.pretrained_checkpoint,
         hf_token=hf_token,
         load_for_training=False,
-        mode=cfg.mode
+        mode=cfg.vla_mode
     )
     for param in vla.parameters():
         assert param.dtype == torch.float32, f"Loaded VLM parameter not in full precision: {param}"
@@ -261,6 +261,8 @@ def get_prismatic_vla_action(vla, processor, base_vla_name, obs, task_label, unn
 
     if "plucker" in obs:
         kwargs["plucker"] = obs["plucker"]
+    elif "basis" in obs:
+        kwargs["basis"] = obs["basis"]
 
     action = vla.predict_action(processed_images, task_label, unnorm_key=unnorm_key, **kwargs)
     return action

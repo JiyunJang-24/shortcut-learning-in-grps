@@ -83,6 +83,11 @@ class OpenVLA(PrismaticVLM):
             pixel_values["plucker"] = kwargs["plucker"].to(self.device)
             del kwargs["plucker"]
 
+        if "basis" in kwargs:
+            assert isinstance(kwargs["basis"], torch.Tensor), f"Unsupported `basis` type = {type(kwargs['basis'])}"
+            pixel_values["basis"] = kwargs["basis"].to(self.device)
+            del kwargs["basis"]
+
         # Invoke super().generate --> taps into `GenerationMixin` which (redirects) to `forward()`
         autocast_dtype = self.llm_backbone.half_precision_dtype
         with torch.autocast("cuda", dtype=autocast_dtype, enabled=self.enable_mixed_precision_training):

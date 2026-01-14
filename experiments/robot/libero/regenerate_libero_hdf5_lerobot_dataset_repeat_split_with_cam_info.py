@@ -329,8 +329,11 @@ def main(args):
                 else:
                     env = rotate_recolor_dataset.rotate_camera(env, camera_id=camera_id, camera_name=camera_name, robot_base_name=robot_base_name, 
                                                               theta=viewpoint_rotate, debug=False)
-                # env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
-                
+                if args.for_dp:
+                    try:
+                        env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
+                    except:
+                        pass
                 for _ in range(10):
                     obs, reward, done, info = env.step(get_libero_dummy_action("llava"))
 
@@ -492,8 +495,11 @@ def main(args):
                                                                 theta=viewpoint_rotate, debug=False)
                     
                     # change the transparency of the transparent object
-                    # env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
-                    
+                    if args.for_dp:
+                        try:
+                            env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
+                        except:
+                            pass
                     for _ in range(10):
                         obs, reward, done, info = env.step(get_libero_dummy_action("llava"))
 
@@ -805,6 +811,13 @@ if __name__ == "__main__":
         help="need color change",
         default="True"
     )
+
+    parser.add_argument(
+        "--for_dp",
+        type=str,
+        help="for dp",
+        default="True"
+    )
     
     
     args = parser.parse_args()
@@ -818,6 +831,7 @@ if __name__ == "__main__":
     args.change_light = args.change_light.lower() == "true"
     args.need_color_change = args.need_color_change.lower() == "true"
     args.need_hdf5 = args.need_hdf5.lower() == "true"
+    args.for_dp = args.for_dp.lower() == "true"
     
     # Start data regeneration
     import time

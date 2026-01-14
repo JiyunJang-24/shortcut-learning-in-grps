@@ -37,7 +37,7 @@ export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_LIST}"
 # CKPT_PATH='/home/xingyouguang/.cache/huggingface/hub/models--Stanford-ILIAD--prism-qwen25-extra-dinosiglip-224px-0_5b/snapshots/5cfd2cc6da00c06e0be7abf35d43ec792d8e9498'
 CKPT_PATH='/home/kwonmc/jiyun/shortcut-learning-in-grps/miniVLA'
 OMP_NUM_THREADS=4 torchrun --standalone --nnodes 1 --nproc-per-node "${WORLD_SIZE}" --master-addr=${MASTER_ADDR} --master-port=${MASTER_PORT} vla-scripts/train.py \
-  --vla.type "prism-qwen25-dinosiglip-plucker-224px+0_5b+mx-libero-spatial" \
+  --vla.type "prism-qwen25-dinosiglip-basis-224px+0_5b+mx-libero-spatial" \
   --vla.data_mix "${DATA_MIX}" \
   --vla.base_vlm "${CKPT_PATH}" \
   --vla.action_tokenizer libero_vq_extra_action_tokenizer \
