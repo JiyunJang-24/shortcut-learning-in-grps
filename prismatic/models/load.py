@@ -194,7 +194,7 @@ def load_vla(
     # if base vlm is a folder, load its config.json (only works for native format!)
     # this might happen if you start a run who's base vlm is from a folder instead of from hf
     if os.path.isdir(base_vlm):
-        with open(Path(base_vlm) / f"config_{mode}.json", "r") as f:
+        with open(Path(base_vlm) / _decide_config_filename(mode), "r") as f:
             base_cfg = json.load(f)["model"]
             base_vlm = base_cfg["model_id"]
 
@@ -227,6 +227,7 @@ def load_vla(
         model_cfg.vision_backbone_id,
         model_cfg.image_resize_strategy,
         image_sequence_len,
+        mode
     )
 
     # Load LLM Backbone --> note `inference_mode = True` by default when calling `load()`
@@ -256,3 +257,9 @@ def load_vla(
     )
 
     return vla
+
+def _decide_config_filename(mode: str)->str:
+    if "concat" in mode:
+        return "config.json"
+    else:
+        return f"config_{mode}.json"

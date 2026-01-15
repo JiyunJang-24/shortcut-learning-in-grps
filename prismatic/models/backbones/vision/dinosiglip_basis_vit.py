@@ -94,6 +94,7 @@ class DinoSigLIPBasisViTBackbone(VisionBackbone):
         image_resize_strategy: str,
         default_image_size: int = 224,
         image_sequence_len: int = 1,
+        **kwargs
     ) -> None:
         super().__init__(
             vision_backbone_id,

@@ -89,10 +89,16 @@ def _calculate_vla_additional_inputs(
     if vla_mode == "plucker":
         return {"plucker": _calculate_plucker_tensor(intrinsic_matrix, extrinsic_matrix, img.shape[0])}
 
+    if vla_mode == "plucker_concat":
+        return {"concat": _calculate_plucker_tensor(intrinsic_matrix, extrinsic_matrix, img.shape[0])}
+
     if vla_mode == "basis":
         return {"basis": _calculate_axis_tensor(state, intrinsic_matrix, extrinsic_matrix, img)}
 
-    if vla_mode == "basis-rescale":
+    if vla_mode == "basis_rescale":
         return {"basis": _calculate_rescaled_axis_tensor(state, intrinsic_matrix, extrinsic_matrix, img)}
+
+    if vla_mode == "basis_rescale_concat":
+        return {"concat": _calculate_rescaled_axis_tensor(state, intrinsic_matrix, extrinsic_matrix, img)}
 
     return {}

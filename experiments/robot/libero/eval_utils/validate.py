@@ -8,7 +8,7 @@ def validate_ckpt(cfg: GenerateConfig) -> None:
     if cfg.model_family == "prismatic":
         ckpt_path = str(cfg.pretrained_checkpoint)
         if cfg.vla_mode == "vanilla":
-            for mode in ["plucker", "basis", "basis-rescale"]:
+            for mode in ["plucker", "basis", "basis-rescale", "basis-rescale-concat"]:
                 assert mode not in ckpt_path, f"[Error] Expected `vanilla` mode, but found `{mode}` in checkpoint path!"
         else:
             assert cfg.vla_mode in ckpt_path, (
@@ -28,7 +28,7 @@ def validate_modes(cfg: GenerateConfig) -> None:
 
 
     if cfg.model_family == "prismatic":
-        assert cfg.vla_mode in ["vanilla", "plucker", "basis", "basis-rescale"], f"[Error] Invalid mode argument: {cfg.vla_mode}!"
+        assert cfg.vla_mode in ["vanilla", "plucker", "basis", "basis_rescale", "basis_rescale_concat"], f"[Error] Invalid mode argument: {cfg.vla_mode}! ***Maybe you are confusing - (dash) with _ (underbar) ***"
 
         print(f"Running {cfg.model_family} model with {cfg.vla_mode} mode.")
 

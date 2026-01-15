@@ -83,10 +83,17 @@ class OpenVLA(PrismaticVLM):
             pixel_values["plucker"] = kwargs["plucker"].to(self.device)
             del kwargs["plucker"]
 
-        if "basis" in kwargs:
+        elif "basis" in kwargs:
             assert isinstance(kwargs["basis"], torch.Tensor), f"Unsupported `basis` type = {type(kwargs['basis'])}"
             pixel_values["basis"] = kwargs["basis"].to(self.device)
             del kwargs["basis"]
+
+        elif "concat" in kwargs:
+            assert isinstance(kwargs["concat"], torch.Tensor), f"Unsupported `concat` type = {type(kwargs['concat'])}"
+            concat_tensor = kwargs["concat"].to(self.device)
+            pixel_values['dino'] = torch.cat([pixel_values['dino'], concat_tensor], dim=1)      # pixel_values have batch dimension since this is inference pipeline
+            pixel_values['siglip'] = torch.cat([pixel_values['siglip'], concat_tensor], dim=1)
+            del kwargs["concat"]
 
         # Invoke super().generate --> taps into `GenerationMixin` which (redirects) to `forward()`
         autocast_dtype = self.llm_backbone.half_precision_dtype

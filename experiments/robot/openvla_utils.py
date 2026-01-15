@@ -259,10 +259,9 @@ def get_prismatic_vla_action(vla, processor, base_vla_name, obs, task_label, unn
     if len(processed_images) == 1:
         processed_images = processed_images[0]
 
-    if "plucker" in obs:
-        kwargs["plucker"] = obs["plucker"]
-    elif "basis" in obs:
-        kwargs["basis"] = obs["basis"]
+    for add_obs_key in ["plucker", "basis", "concat"]:
+        if add_obs_key in obs:
+            kwargs[add_obs_key] = obs[add_obs_key]
 
     action = vla.predict_action(processed_images, task_label, unnorm_key=unnorm_key, **kwargs)
     return action
