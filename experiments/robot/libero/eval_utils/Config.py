@@ -67,4 +67,5 @@ class GenerateConfig:
     use_dynamics_basis: bool = False
     apply_basis_scale: bool = False
     camera_scale: float = 1.0
+    use_wrist_image: bool = False
     vla_mode: str = "vanilla"

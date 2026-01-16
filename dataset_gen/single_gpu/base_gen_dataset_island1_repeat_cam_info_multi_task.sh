@@ -13,7 +13,7 @@ conda activate shortcut-learning
 
 # ====== 절대경로 고정 ======
 ROOT="/data1/local/shortcut-learning-in-grps"
-username="cam_info"
+username="DP_wrist_cam_info"
 
 export PYTHONPATH="${ROOT}/LIBERO:${PYTHONPATH}"
 export PYTHONPATH="${PYTHONPATH:-}:${ROOT}/dataset_git/rlds_dataset_builder"

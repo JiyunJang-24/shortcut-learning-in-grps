@@ -81,6 +81,7 @@ from lerobot.common.datasets.viz_utils import (
     _make_motion_basis_axis_rgb_tensor_cam_to_world,
     save_rgb_image,
     _rescale_make_motion_basis_axis_rgb_tensor_cam_to_world,
+    _make_motion_basis_wrist_axis_rgb_tensor_cam_to_world,
 )
 # Append current directory so that interpreter can find experiments.robot
 sys.path.append("../..")
@@ -356,6 +357,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
             intrinsic_matrix = torch.from_numpy(CU.get_camera_intrinsic_matrix(env.sim, camera_name, height, width)).float()
             extrinsic_matrix = torch.from_numpy(CU.get_camera_extrinsic_matrix(env.sim, camera_name)).float()
             plucker_extrinsic_matrix = remove_extrinsic_camera_axis_correction(extrinsic_matrix)
+
             if cfg.use_plucker:
                 plucker_embedder = PluckerEmbedder(img_size=height, device='cpu')
             # Setup
@@ -386,19 +388,27 @@ def eval_libero(cfg: GenerateConfig) -> None:
 
                     if cfg.model_family == "diffusion":
                         # Get preprocessed image, 这里image已经是flip了，他和咱们训练的 xyg/v-0.xx-0.xx-0.xx-0.xx-flip 一致
+                        wrist_intrinsic_matrix = torch.from_numpy(CU.get_camera_intrinsic_matrix(env.sim, 'robot0_eye_in_hand', height, width)).float()
+                        wrist_extrinsic_matrix = torch.from_numpy(CU.get_camera_extrinsic_matrix(env.sim, 'robot0_eye_in_hand')).float()
+                        wrist_plucker_extrinsic_matrix = remove_extrinsic_camera_axis_correction(wrist_extrinsic_matrix)
                         replay_images.append(np.flipud(obs["agentview_image"]).copy())
                         image = torch.from_numpy(np.flipud(obs["agentview_image"]).copy())
+                        wrist_image = torch.from_numpy(np.flipud(obs["robot0_eye_in_hand_image"]).copy())
                         state = torch.from_numpy(np.concatenate([obs["robot0_gripper_qpos"], obs["robot0_eef_pos"], obs["robot0_eef_quat"]]))
                         state = state.to(torch.float32)
                         image = image.to(torch.float32) / 255
+                        wrist_image = wrist_image.to(torch.float32) / 255
                         image = image.permute(2, 0, 1)  # H, W, C -> C, H, W
+                        wrist_image = wrist_image.permute(2, 0, 1)  # H, W, C -> C, H, W
                         # Send data tensors from CPU to GPU
                         state = state.to('cuda', non_blocking=True)
                         image = image.to('cuda', non_blocking=True)
+                        wrist_image = wrist_image.to('cuda', non_blocking=True)
 
                         # Add extra (empty) batch dimension, required to forward the policy
                         state = state.unsqueeze(0)
                         image = image.unsqueeze(0)
+                        wrist_image = wrist_image.unsqueeze(0)
                         if cfg.use_plucker:
                             with torch.no_grad():
                                 intrinsic_tensor = intrinsic_matrix.unsqueeze(0)
@@ -419,10 +429,24 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                     origin_robot=True,
                                     origin_fallback="pp",
                                     arrow_len=60,
-                                    return_overlay=False,
+                                    return_overlay=True,
                                 ) # (B, 3, H, W)
-                                # save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
-                                # save_rgb_image(image[0].to('cpu'), "eef_overlay_out/origin_img.png")
+                                save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
+                                if cfg.use_wrist_image:
+                                    wrist_axis_tensor, wrist_origin_xy = _make_motion_basis_wrist_axis_rgb_tensor_cam_to_world(
+                                        rgb_tensor=wrist_image.to('cpu'),
+                                        cam_to_world=wrist_plucker_extrinsic_matrix,
+                                        intrinsic_matrix=wrist_intrinsic_matrix,
+                                        robot_eef_abs_poses=state[:, -7:],
+                                        origin_robot=True,
+                                        origin_fallback="pp",
+                                        arrow_len=60,
+                                        return_overlay=False,
+                                    )
+                                    save_rgb_image(wrist_axis_tensor[0], "eef_overlay_out/wrist_axis_not_scaled_tensor.png")
+                                    wrist_image = torch.cat([wrist_image, wrist_axis_tensor.to('cuda')], dim=1)
+                                save_rgb_image(image[0].to('cpu'), "eef_overlay_out/origin_img.png")
+                                save_rgb_image(wrist_image[0].to('cpu'), "eef_overlay_out/wrist_origin_img.png")
                             image = torch.cat([image, axis_tensor.to('cuda')], dim=1)
 
                         elif cfg.use_dynamics_basis and cfg.apply_basis_scale:
@@ -439,13 +463,33 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                 ) # (B, 3, H, W)
                                 # save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
                                 # save_rgb_image(image[0].to('cpu'), "eef_overlay_out/origin_img.png")
+                                if cfg.use_wrist_image:
+                                    wrist_axis_tensor, wrist_origin_xy = _rescale_make_motion_basis_wrist_axis_rgb_tensor_cam_to_world(
+                                        rgb_tensor=wrist_image.to('cpu'),
+                                        cam_to_world=wrist_plucker_extrinsic_matrix,
+                                        intrinsic_matrix=wrist_intrinsic_matrix,
+                                        robot_eef_abs_poses=state[:, -7:],
+                                        origin_robot=True,
+                                        origin_fallback="pp",
+                                        arrow_len=60,
+                                        return_overlay=False,
+                                    )
+                                    save_rgb_image(wrist_axis_tensor[0], "eef_overlay_out/wrist_axis_scaled_tensor.png")
+                                    wrist_image = torch.cat([wrist_image, wrist_axis_tensor.to('cuda')], dim=1)
                             image = torch.cat([image, axis_tensor.to('cuda')], dim=1)
-                        # Create the policy input dictionary
-                        observation = {
-                            "observation.state": state,
-                            "observation.image": image,
-                            "task": task_description
-                        }
+                        if cfg.use_wrist_image:
+                            observation = {
+                                "observation.state": state,
+                                "observation.image": image,
+                                "observation.wrist_image": wrist_image,
+                                "task": task_description
+                            }
+                        else:
+                            observation = {
+                                "observation.state": state,
+                                "observation.image": image,
+                                "task": task_description
+                            }
 
                         with torch.inference_mode():
                             action = policy.select_action(observation)

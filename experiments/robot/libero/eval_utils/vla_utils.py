@@ -5,11 +5,11 @@ import numpy as np
 import einops
 
 from robosuite.utils import camera_utils as CU
-from lerobot.lerobot.common.datasets.camera_utils import (
+from lerobot.common.datasets.camera_utils import (
     PluckerEmbedder,
     remove_extrinsic_camera_axis_correction
 )
-from lerobot.lerobot.common.datasets.viz_utils import (
+from lerobot.common.datasets.viz_utils import (
     _get_motion_dynamics_basis,
     _make_motion_basis_axis_rgb_tensor_cam_to_world,
     save_rgb_image,

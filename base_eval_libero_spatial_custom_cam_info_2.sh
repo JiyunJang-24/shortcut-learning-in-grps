@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -
 REPO_ROOT="${SCRIPT_DIR}"
 export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 
-base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2026-01-15/12-24-22_DP_spatial_angle_from_0_22.5_45_337.5_315_task_0"
+base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2026-01-15/09-16-40_DP_spatial_plucker_angle_from_0_22.5_45_337.5_315_task_0"
 checkpoint_dir="${base_ckpt_dir}/checkpoints"
 checkpoint_step="100000"
 ckpt_path="${checkpoint_dir}/${checkpoint_step}/pretrained_model"
@@ -28,7 +28,8 @@ for seed in "${seeds[@]}"; do
       for angle in "${angles[@]}"; do
         outdir="${log_root}/seed_${seed}/task_${task}/angle_${angle}"
         mkdir -p "$outdir"
-        python -u experiments/robot/libero/run_libero_eval_dp_minivla.py \
+
+        python -u experiments/robot/libero/run_libero_eval_dp_minivla_cam_info.py \
           --model_family diffusion \
           --pretrained_checkpoint "${ckpt_path}" \
           --task_suite_name libero_spatial \
@@ -45,7 +46,11 @@ for seed in "${seeds[@]}"; do
           --need_color_change false \
           --specific_task_id "${task}" \
           --local_log_dir "${outdir}" \
-          --seed "${seed}" 
+          --seed "${seed}" \
+          --use_plucker true \
+          --use_dynamics_basis false \
+          --apply_basis_scale false \
+          --camera_scale 1.0
       done
     done
   ) &
