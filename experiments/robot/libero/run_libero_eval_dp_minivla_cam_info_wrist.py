@@ -429,9 +429,9 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                     origin_robot=True,
                                     origin_fallback="pp",
                                     arrow_len=60,
-                                    return_overlay=True,
+                                    return_overlay=False,
                                 ) # (B, 3, H, W)
-                                save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
+                                # save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
                                 if cfg.use_wrist_image:
                                     wrist_axis_tensor, wrist_origin_xy = _make_motion_basis_wrist_axis_rgb_tensor_cam_to_world(
                                         rgb_tensor=wrist_image.to('cpu'),
@@ -443,10 +443,11 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                         arrow_len=60,
                                         return_overlay=False,
                                     )
-                                    save_rgb_image(wrist_axis_tensor[0], "eef_overlay_out/wrist_axis_not_scaled_tensor.png")
+                                    # save_rgb_image(wrist_axis_tensor[0], "eef_overlay_out/wrist_axis_not_scaled_tensor.png")
+                                    # save_rgb_image(wrist_image[0].to('cpu'), "eef_overlay_out/wrist_origin_img.png")
                                     wrist_image = torch.cat([wrist_image, wrist_axis_tensor.to('cuda')], dim=1)
-                                save_rgb_image(image[0].to('cpu'), "eef_overlay_out/origin_img.png")
-                                save_rgb_image(wrist_image[0].to('cpu'), "eef_overlay_out/wrist_origin_img.png")
+                                # save_rgb_image(image[0].to('cpu'), "eef_overlay_out/origin_img.png")
+                                
                             image = torch.cat([image, axis_tensor.to('cuda')], dim=1)
 
                         elif cfg.use_dynamics_basis and cfg.apply_basis_scale:
@@ -474,7 +475,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                         arrow_len=60,
                                         return_overlay=False,
                                     )
-                                    save_rgb_image(wrist_axis_tensor[0], "eef_overlay_out/wrist_axis_scaled_tensor.png")
+                                    # save_rgb_image(wrist_axis_tensor[0], "eef_overlay_out/wrist_axis_scaled_tensor.png")
                                     wrist_image = torch.cat([wrist_image, wrist_axis_tensor.to('cuda')], dim=1)
                             image = torch.cat([image, axis_tensor.to('cuda')], dim=1)
                         if cfg.use_wrist_image:

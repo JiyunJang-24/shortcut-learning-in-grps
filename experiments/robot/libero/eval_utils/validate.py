@@ -36,9 +36,15 @@ def validate_modes(cfg: GenerateConfig) -> None:
         if cfg.vla_mode is not None:
             warnings.warn(f"[WARNING] You are using a mode argument which is defined for VLA models")
 
-        assert cfg.use_dynamics_basis ^ cfg.use_plucker, f"[ERROR] Both use_dynamics_basis and use_plucker are {cfg.use_dynamics_basis}."
+        # assert cfg.use_dynamics_basis ^ cfg.use_plucker, f"[ERROR] Both use_dynamics_basis and use_plucker are {cfg.use_dynamics_basis}."
 
-        print(f"Running {cfg.model_family} model with {'plucker' if cfg.use_plucker else 'basis'}.")
+        # print(f"Running {cfg.model_family} model with {'plucker' if cfg.use_plucker else 'basis'}.")
+        if cfg.use_plucker:
+            print(f"Running {cfg.model_family} model with plucker.")
+        elif cfg.use_dynamics_basis:
+            print(f"Running {cfg.model_family} model with dynamics basis.")
+        else:
+            print(f"Running {cfg.model_family} model with vanilla images.")
 
 
 def validate_cli_args(cfg: GenerateConfig) -> None:
