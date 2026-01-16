@@ -361,6 +361,8 @@ def eval_libero(cfg: GenerateConfig) -> None:
             if cfg.use_plucker:
                 plucker_embedder = PluckerEmbedder(img_size=height, device='cpu')
             # Setup
+            if cfg.rotate_object is not None and cfg.rotate_angle_deg is not None:
+                env = rotate_recolor_dataset.rotate_object(env, object_name=cfg.rotate_object, theta_deg=cfg.rotate_angle_deg)
             t = 0
             replay_images = []
             replay_wrist_images = []

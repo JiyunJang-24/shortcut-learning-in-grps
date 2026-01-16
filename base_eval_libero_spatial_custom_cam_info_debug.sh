@@ -19,7 +19,7 @@ export MUJOCO_GL=egl
 # seeds=(7 8 9)
 angles=(0.0)
 tasks=(0)       # 0=A, 4=B
-seeds=(14)
+seeds=(55)
 export PYTHONUNBUFFERED=1
 mkdir -p "${log_root}"
 # 실행
@@ -45,7 +45,9 @@ for seed in "${seeds[@]}"; do
         --local_log_dir "${outdir}" \
         --seed "${seed}" \
         --use_plucker false \
-        --use_dynamics_basis true
+        --use_dynamics_basis true \
+        --rotate_object "table" \
+        --rotate_angle_deg 30
     done
   done
 done

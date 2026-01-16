@@ -359,6 +359,8 @@ def eval_libero(cfg: GenerateConfig) -> None:
             if cfg.use_plucker:
                 plucker_embedder = PluckerEmbedder(img_size=height, device='cpu')
             # Setup
+            if cfg.rotate_object is not None and cfg.rotate_angle_deg is not None:
+                env = rotate_recolor_dataset.rotate_object(env, object_name=cfg.rotate_object, theta_deg=cfg.rotate_angle_deg)
             t = 0
             replay_images = []
             replay_wrist_images = []
@@ -422,7 +424,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                     return_overlay=False,
                                 ) # (B, 3, H, W)
                                 # save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
-                                # save_rgb_image(image[0].to('cpu'), "eef_overlay_out/origin_img.png")
+                                save_rgb_image(image[0].to('cpu'), "eef_overlay_out/origin_img.png")
                             image = torch.cat([image, axis_tensor.to('cuda')], dim=1)
 
                         elif cfg.use_dynamics_basis and cfg.apply_basis_scale:

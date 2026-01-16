@@ -68,4 +68,6 @@ class GenerateConfig:
     apply_basis_scale: bool = False
     camera_scale: float = 1.0
     use_wrist_image: bool = False
+    rotate_object: Optional[str] = None
+    rotate_angle_deg: Optional[float] = None
     vla_mode: str = "vanilla"
