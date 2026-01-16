@@ -464,7 +464,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                                 # save_rgb_image(axis_tensor[0], "eef_overlay_out/axis_tensor.png")
                                 # save_rgb_image(image[0].to('cpu'), "eef_overlay_out/origin_img.png")
                                 if cfg.use_wrist_image:
-                                    wrist_axis_tensor, wrist_origin_xy = _rescale_make_motion_basis_wrist_axis_rgb_tensor_cam_to_world(
+                                    wrist_axis_tensor, wrist_origin_xy = _rescale_make_motion_basis_axis_rgb_tensor_cam_to_world(
                                         rgb_tensor=wrist_image.to('cpu'),
                                         cam_to_world=wrist_plucker_extrinsic_matrix,
                                         intrinsic_matrix=wrist_intrinsic_matrix,
