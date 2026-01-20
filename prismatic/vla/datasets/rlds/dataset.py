@@ -140,6 +140,7 @@ def make_dataset_from_rlds(
                 f"Trajectory is missing keys: {REQUIRED_KEYS - set(traj.keys())}. " "Did you write a `standardize_fn`?"
             )
 
+
         # extracts images, depth images and proprio from the "observation" dict
         traj_len = tf.shape(traj["action"])[0]
         old_obs = traj["observation"]
@@ -157,7 +158,8 @@ def make_dataset_from_rlds(
                 new_obs[f"depth_{new}"] = old_obs[old]
 
         if state_obs_keys:
-            new_obs["proprio"] = tf.concat(
+            # BASIS
+            eef_state = tf.concat(
                 [
                     (
                         tf.zeros((traj_len, 1), dtype=tf.float32)  # padding
@@ -168,6 +170,9 @@ def make_dataset_from_rlds(
                 ],
                 axis=1,
             )
+            new_obs["proprio"] = eef_state
+            new_obs["eef_state"] = eef_state    # To avoid eef_state being normalized
+
 
         # add timestep info
         new_obs["timestep"] = tf.range(traj_len)
@@ -186,6 +191,8 @@ def make_dataset_from_rlds(
             "task": task,
             "action": tf.cast(traj["action"], tf.float32),
             "dataset_name": tf.repeat(name, traj_len),
+            "extrinsic_matrix": tf.cast(traj["extrinsic_matrix"], tf.float32),
+            "intrinsic_matrix": tf.cast(traj["intrinsic_matrix"], tf.float32),
         }
 
         if absolute_action_mask is not None:

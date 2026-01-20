@@ -20,6 +20,8 @@ from prismatic.models.backbones.vision import (
     IN1KViTBackbone,
     SigLIPViTBackbone,
     VisionBackbone,
+    DinoSigLIPPluckerViTBackbone,
+    DinoSigLIPBasisViTBackbone
 )
 from prismatic.models.vlms import PrismaticVLM
 
@@ -48,6 +50,10 @@ VISION_BACKBONES = {
     # === Fused Backbones ===
     "dinoclip-vit-l-336px": {"cls": DinoCLIPViTBackbone, "kwargs": {"default_image_size": 336}},
     "dinosiglip-vit-so-384px": {"cls": DinoSigLIPViTBackbone, "kwargs": {"default_image_size": 384}},
+
+    # === Backbones with Plucker Embeddings ===
+    "dinosiglip-plucker-vit-so-224px": {"cls": DinoSigLIPPluckerViTBackbone, "kwargs": {"default_image_size": 224}},
+    "dinosiglip-basis-vit-so-224px": {"cls": DinoSigLIPBasisViTBackbone, "kwargs": {"default_image_size": 224}}
 }
 
 
@@ -86,12 +92,13 @@ def get_vision_backbone_and_transform(
     vision_backbone_id: str,
     image_resize_strategy: str,
     image_sequence_len: int,
+    mode: str = "vanilla"
 ) -> Tuple[VisionBackbone, ImageTransform]:
     """Instantiate a Vision Backbone, returning both the nn.Module wrapper class and default Image Transform."""
     if vision_backbone_id in VISION_BACKBONES:
         vision_cfg = VISION_BACKBONES[vision_backbone_id]
         vision_backbone: VisionBackbone = vision_cfg["cls"](
-            vision_backbone_id, image_resize_strategy, image_sequence_len=image_sequence_len, **vision_cfg["kwargs"]
+            vision_backbone_id, image_resize_strategy, image_sequence_len=image_sequence_len, mode=mode, **vision_cfg["kwargs"]
         )
         image_transform = vision_backbone.get_image_transform()
         return vision_backbone, image_transform

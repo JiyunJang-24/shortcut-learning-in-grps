@@ -20,7 +20,7 @@ libero_base_save_dir="${libero_raw_data_dir}_no_noops_island"
 export PYTHONPATH="${ROOT}/LIBERO:${PYTHONPATH}"
 
 # viewpoint_rotate=(0.0 22.5 45.0 315.0 337.5 90.0 270.0)
-viewpoint_rotate=(22.5 45.0)
+viewpoint_rotate=(315.0 337.5)
 # viewpoint_rotate=(0.0)
 vmin=1.00
 vmax=1.00

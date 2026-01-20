@@ -12,6 +12,9 @@ import timm
 import torch
 from PIL import Image
 from timm.models.vision_transformer import Block, VisionTransformer
+
+from torch import nn
+import torch.nn.functional as F
 from torch.distributed.fsdp.wrap import _module_wrap_policy, _or_policy, transformer_auto_wrap_policy
 from torchvision.transforms import Compose, Resize
 
@@ -23,17 +26,55 @@ from prismatic.models.backbones.vision.base_vision import (
     unpack_tuple,
 )
 
+
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+"""
+Backbone module for injecting Plucker Embeddings.
+"""
+class FrozenBatchNorm2d(torch.nn.Module):
+
+    def __init__(self, n, eps=1e-5):
+        super(FrozenBatchNorm2d, self).__init__()
+        self.register_buffer("weight", torch.ones(n))
+        self.register_buffer("bias", torch.zeros(n))
+        self.register_buffer("running_mean", torch.zeros(n))
+        self.register_buffer("running_var", torch.ones(n))
+        self.eps = eps
+
+    def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict,
+                              missing_keys, unexpected_keys, error_msgs):
+        num_batches_tracked_key = prefix + 'num_batches_tracked'
+        if num_batches_tracked_key in state_dict:
+            del state_dict[num_batches_tracked_key]
+
+        super(FrozenBatchNorm2d, self)._load_from_state_dict(
+            state_dict, prefix, local_metadata, strict,
+            missing_keys, unexpected_keys, error_msgs)
+
+    def forward(self, x):
+        w = self.weight.reshape(1, -1, 1, 1)
+        b = self.bias.reshape(1, -1, 1, 1)
+        rv = self.running_var.reshape(1, -1, 1, 1)
+        rm = self.running_mean.reshape(1, -1, 1, 1)
+        eps = self.eps
+        scale = w * (rv + eps).rsqrt()
+        bias = b - rm * scale
+        return x * scale + bias
+
+
+
 # Registry =>> Supported DinoSigLIP Pairs (as TIMM identifiers)
 DINOSigLIP_VISION_BACKBONES = {
-    "dinosiglip-vit-so-224px": {
+    "dinosiglip-basis-vit-so-224px": {
         "dino": "vit_large_patch14_reg4_dinov2.lvd142m",
         "siglip": "vit_so400m_patch14_siglip_224",
-    },
-    "dinosiglip-vit-so-384px": {
-        "dino": "vit_large_patch14_reg4_dinov2.lvd142m",
-        "siglip": "vit_so400m_patch14_siglip_384",
-    },
+    }
 }
+
+    # "dinosiglip-vit-so-384px": {
+    #     "dino": "vit_large_patch14_reg4_dinov2.lvd142m",
+    #     "siglip": "vit_so400m_patch14_siglip_384",
+    # },
 
 
 @dataclass
@@ -46,14 +87,14 @@ class DinoSigLIPImageTransform:
         return {"dino": self.dino_image_transform(img, **kwargs), "siglip": self.siglip_image_transform(img, **kwargs)}
 
 
-class DinoSigLIPViTBackbone(VisionBackbone):
+class DinoSigLIPBasisViTBackbone(VisionBackbone):
     def __init__(
         self,
         vision_backbone_id: str,
         image_resize_strategy: str,
         default_image_size: int = 224,
         image_sequence_len: int = 1,
-        mode: str = "vanilla",
+        **kwargs
     ) -> None:
         super().__init__(
             vision_backbone_id,
@@ -69,11 +110,13 @@ class DinoSigLIPViTBackbone(VisionBackbone):
             self.dino_timm_path_or_url, pretrained=True, num_classes=0, img_size=self.default_image_size
         )
         self.dino_featurizer.eval()
+        self.dino_featurizer.requires_grad_(False)
 
         self.siglip_featurizer: VisionTransformer = timm.create_model(
             self.siglip_timm_path_or_url, pretrained=True, num_classes=0, img_size=self.default_image_size
         )
         self.siglip_featurizer.eval()
+        self.siglip_featurizer.requires_grad_(False)
 
         # Monkey-Patch the `forward()` function of the featurizers to ensure FSDP-compatibility
         #   => Note: By default set `get_intermediate_layers` to return the *SECOND-TO-LAST* layer patches!
@@ -150,23 +193,51 @@ class DinoSigLIPViTBackbone(VisionBackbone):
 
         else:
             raise ValueError(f"Image Resize Strategy `{self.image_resize_strategy}` is not supported!")
-        self.mode = mode
-        if self.mode == "basis_rescale_concat" or self.mode == "basis_concat":
-            self.dino_featurizer.patch_embed.proj = expand_in_channels_keep_rgb(
-                self.dino_featurizer.patch_embed.proj, new_in_chans=6,
-            )
-            self.siglip_featurizer.patch_embed.proj = expand_in_channels_keep_rgb(
-                self.siglip_featurizer.patch_embed.proj, new_in_chans=6,
-            )
-            print("DinoSigLIPViTBackbone: Expanded in_channels to 6 for basis-rescale-based input!")
-        elif self.mode == "plucker_concat":
-            self.dino_featurizer.patch_embed.proj = expand_in_channels_keep_rgb(
-                self.dino_featurizer.patch_embed.proj, new_in_chans=9,
-            )
-            self.siglip_featurizer.patch_embed.proj = expand_in_channels_keep_rgb(
-                self.siglip_featurizer.patch_embed.proj, new_in_chans=9,
-            )
-            print("DinoSigLIPViTBackbone: Expanded in_channels to 9 for plucker-based input!")
+
+        # BASIS
+        self._init_basis()
+
+    def _init_basis(self):
+        # Plucker fusion modules (before connector)
+        # Encode 3-channel basis map to a 512-d feature grid
+        self.basis_encoder = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False),
+            FrozenBatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1, bias=False),
+            FrozenBatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1, bias=False),
+            FrozenBatchNorm2d(256),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(256, 512, kernel_size=3, stride=2, padding=1, bias=False),
+            FrozenBatchNorm2d(512),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(512, 512, kernel_size=3, stride=2, padding=1, bias=False),
+            FrozenBatchNorm2d(512),
+            nn.ReLU(inplace=True),
+        )
+        # Project to vision hidden size and fuse with SigLIP tokens
+        vision_hidden = self.embed_dim
+        # vision_hidden = int(self.siglip_featurizer.embed_dim)
+        self.basis_out_proj = nn.Conv2d(512, vision_hidden, kernel_size=1)
+        self.vision_fusion_proj = nn.Linear(vision_hidden * 2, vision_hidden)
+        # Normalize streams and align dtypes with vision encoder
+        self.vision_ln = nn.LayerNorm(vision_hidden, elementwise_affine=False)
+        self.basis_ln = nn.LayerNorm(vision_hidden, elementwise_affine=False)
+        vf_dtype = next(self.siglip_featurizer.parameters()).dtype
+        self.basis_out_proj = self.basis_out_proj.to(dtype=vf_dtype)
+        self.vision_fusion_proj = self.vision_fusion_proj.to(dtype=vf_dtype)
+
+
+    def train(self, mode: bool = True) -> "DinoSigLIPPluckerViTBackbone":
+        """Override train to keep DINO/SigLIP frozen."""
+        super().train(mode)
+        # Always keep base vision encoders in eval mode
+        self.dino_featurizer.eval()
+        self.siglip_featurizer.eval()
+        return self
+
 
     def get_fsdp_wrapping_policy(self) -> Callable:
         """Return a simple FSDP policy that wraps each ViT block and then both of the _entire_ featurizers."""
@@ -179,14 +250,42 @@ class DinoSigLIPViTBackbone(VisionBackbone):
         if self.image_sequence_len == 1:
             dino_patches = self.dino_featurizer(pixel_values["dino"])
             siglip_patches = self.siglip_featurizer(pixel_values["siglip"])
+            image_hidden_states = torch.cat([dino_patches, siglip_patches], dim=2)
+
+            # Determine grid size from number of tokens L = s*s
+            b, l, dv = image_hidden_states.shape
+            s = int(l ** 0.5)
+            if s * s != l:
+                raise ValueError("Non-square token grid from vision encoder; cannot align Plücker features")
+
+            # Encode Plücker and pool to s x s grid
+            p_feat = self.basis_encoder(pixel_values["basis"])
+            p_feat = F.adaptive_avg_pool2d(p_feat, output_size=(s, s))  # [B, 512, s, s]
+            p_feat = self.basis_out_proj(p_feat)  # [B, Dv, s, s]
+            basis_patches = p_feat.flatten(2).transpose(1, 2)  # [B, L, Dv]
+
+            # Concatenate and fuse back to Dv (normalize per token first)
+            if basis_patches.dtype != image_hidden_states.dtype:
+                basis_patches = basis_patches.to(dtype=image_hidden_states.dtype)
+            image_hidden_states = self.vision_ln(image_hidden_states)
+            basis_patches = self.basis_ln(basis_patches)
+            fused = torch.cat([image_hidden_states, basis_patches], dim=-1)  # [B, L, 2*Dv]
+            image_hidden_states = self.vision_fusion_proj(fused)  # [B, L, Dv]
+
+
         else:
             featurizers = {
                 "dino": self.dino_featurizer,
                 "siglip": self.siglip_featurizer,
             }
+
             patches = compute_sequence_patches(pixel_values, featurizers, self.image_sequence_len)
             dino_patches, siglip_patches = patches["dino"], patches["siglip"]
-        return torch.cat([dino_patches, siglip_patches], dim=2)
+            # TODO (mung3477): Forward process for plucker embeddings
+
+            image_hidden_states = torch.cat([dino_patches, siglip_patches], dim=2)
+
+        return image_hidden_states
 
     @property
     def default_image_resolution(self) -> Tuple[int, int, int]:
@@ -204,38 +303,3 @@ class DinoSigLIPViTBackbone(VisionBackbone):
     @property
     def half_precision_dtype(self) -> torch.dtype:
         return torch.bfloat16
-
-import torch.nn as nn
-
-def expand_in_channels_keep_rgb(conv: nn.Conv2d, new_in_chans: int,) -> nn.Conv2d:
-    """
-    conv: 기존 Conv2d (in_chans=3)
-    new_in_chans: 예) 6
-    """
-    assert isinstance(conv, nn.Conv2d)
-    old_w = conv.weight.data
-    old_b = conv.bias.data if conv.bias is not None else None
-
-    old_in = conv.in_channels
-    assert new_in_chans >= old_in
-
-    new_conv = nn.Conv2d(
-        in_channels=new_in_chans,
-        out_channels=conv.out_channels,
-        kernel_size=conv.kernel_size,
-        stride=conv.stride,
-        padding=conv.padding,
-        dilation=conv.dilation,
-        groups=conv.groups,
-        bias=(conv.bias is not None),
-        padding_mode=conv.padding_mode,
-    ).to(device=old_w.device, dtype=old_w.dtype)
-
-    with torch.no_grad():
-        # 1) RGB(기존 3채널) weight 복사
-        new_conv.weight[:, :old_in, :, :].copy_(old_w)
-        # 2) bias 복사
-        if old_b is not None:
-            new_conv.bias.copy_(old_b)
-
-    return new_conv

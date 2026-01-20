@@ -55,13 +55,15 @@ def load(
     cache_dir: Optional[Union[str, Path]] = None,
     load_for_training: bool = False,
     image_sequence_len: Optional[int] = None,
+    mode: str = "vanilla"
 ) -> PrismaticVLM:
     """Loads a pretrained PrismaticVLM from either local disk or the HuggingFace Hub."""
     if os.path.isdir(model_id_or_path):
         overwatch.info(f"Loading from local path `{(run_dir := Path(model_id_or_path))}`")
 
         # Get paths for `config.json` and pretrained checkpoint
-        config_json, checkpoint_pt = run_dir / "config.json", run_dir / "checkpoints" / "step-020792-epoch-01-loss=0.5268.pt"
+
+        config_json, checkpoint_pt = run_dir / f"config_{mode}.json", run_dir / "checkpoints" / "step-020792-epoch-01-loss=0.5268.pt"
         assert config_json.exists(), f"Missing `config.json` for `{run_dir = }`"
         assert checkpoint_pt.exists(), f"Missing checkpoint for `{run_dir = }`"
     else:
@@ -102,6 +104,7 @@ def load(
         model_cfg["vision_backbone_id"],
         model_cfg["image_resize_strategy"],
         image_sequence_len,
+        mode,
     )
 
     # Load LLM Backbone --> note `inference_mode = True` by default when calling `load()`
@@ -135,6 +138,7 @@ def load_vla(
     load_for_training: bool = False,
     step_to_load: Optional[int] = None,
     model_type: str = "pretrained",
+    mode: str = "vanilla",
     image_sequence_len: Optional[int] = None,
 ) -> OpenVLA:
     """Loads a pretrained OpenVLA from either local disk or the HuggingFace Hub."""
@@ -149,7 +153,7 @@ def load_vla(
         run_dir = checkpoint_pt.parents[1]
 
         # Get paths for `config.json`, `dataset_statistics.json` and pretrained checkpoint
-        config_json, dataset_statistics_json = run_dir / "config.json", run_dir / "dataset_statistics.json"
+        config_json, dataset_statistics_json = run_dir / f"config.json", run_dir / "dataset_statistics.json"
         assert config_json.exists(), f"Missing `config.json` for `{run_dir = }`"
         assert dataset_statistics_json.exists(), f"Missing `dataset_statistics.json` for `{run_dir = }`"
 
@@ -190,7 +194,7 @@ def load_vla(
     # if base vlm is a folder, load its config.json (only works for native format!)
     # this might happen if you start a run who's base vlm is from a folder instead of from hf
     if os.path.isdir(base_vlm):
-        with open(Path(base_vlm) / "config.json", "r") as f:
+        with open(Path(base_vlm) / _decide_config_filename(mode), "r") as f:
             base_cfg = json.load(f)["model"]
             base_vlm = base_cfg["model_id"]
 
@@ -223,6 +227,7 @@ def load_vla(
         model_cfg.vision_backbone_id,
         model_cfg.image_resize_strategy,
         image_sequence_len,
+        mode
     )
 
     # Load LLM Backbone --> note `inference_mode = True` by default when calling `load()`
@@ -252,3 +257,9 @@ def load_vla(
     )
 
     return vla
+
+def _decide_config_filename(mode: str)->str:
+    if "concat" in mode:
+        return "config.json"
+    else:
+        return f"config_{mode}.json"

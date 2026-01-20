@@ -10,76 +10,78 @@ export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 
 CUR_PATH=$(pwd)
 
-libero_task_suite="libero_spatial"
-libero_raw_data_dir="${REPO_ROOT}/dataset_git/libero_spatial"
+libero_task_suite="libero_10"
+libero_raw_data_dir="${REPO_ROOT}/dataset_git/libero_10"
 libero_base_save_dir="${libero_raw_data_dir}_no_noops_island"
 
 # viewpoint_rotate_lower_bound=15.0
 # viewpoint_rotate_upper_bound=65.0
-viewpoint_rotate=(22.5)
+viewpoint_rotate=(0.0)
 vmin=1.00
 vmax=1.00
 num_tasks_in_suite=1
-specify_task_id=0
+specify_task_id=(0 1 2 3 4 5 6 7 8 9)
 number_demo_per_task=1
 demo_repeat_times=1
-username="cam_info"
+username="multi_task_cam_info"
 for i in "${viewpoint_rotate[@]}"; do
-    viewpoint_rotate_lower_bound=$i
-    viewpoint_rotate_upper_bound=$i
+    for task_id in "${specify_task_id[@]}"; do
+        viewpoint_rotate_lower_bound=$i
+        viewpoint_rotate_upper_bound=$i
 
-    if [ 1 -eq 1 ]; then
-        python experiments/robot/libero/regenerate_libero_hdf5_lerobot_dataset_repeat_split_with_cam_info.py \
-            --libero_task_suite $libero_task_suite \
-            --libero_raw_data_dir $libero_raw_data_dir \
-            --libero_base_save_dir $libero_base_save_dir \
-            --need_hdf5 True --show_diff True --user_name $username \
-            --viewpoint_rotate_lower_bound $viewpoint_rotate_lower_bound \
-            --viewpoint_rotate_upper_bound $viewpoint_rotate_upper_bound \
-            --vmin $vmin --vmax $vmax --need_color_change False \
-            --num_tasks_in_suite $num_tasks_in_suite --specify_task_id $specify_task_id --number_demo_per_task $number_demo_per_task \
-            --demo_repeat_times $demo_repeat_times --change_light False
-    fi
+        if [ 1 -eq 1 ]; then
+            python experiments/robot/libero/regenerate_libero_hdf5_lerobot_dataset_repeat_split_with_cam_info.py \
+                --libero_task_suite $libero_task_suite \
+                --libero_raw_data_dir $libero_raw_data_dir \
+                --libero_base_save_dir $libero_base_save_dir \
+                --need_hdf5 True --show_diff True --user_name $username \
+                --viewpoint_rotate_lower_bound $viewpoint_rotate_lower_bound \
+                --viewpoint_rotate_upper_bound $viewpoint_rotate_upper_bound \
+                --vmin $vmin --vmax $vmax --need_color_change False \
+                --num_tasks_in_suite $num_tasks_in_suite --specify_task_id $task_id --number_demo_per_task $number_demo_per_task \
+                --demo_repeat_times $demo_repeat_times --change_light False
+        fi
 
-    cd "${CUR_PATH}/dataset_git/rlds_dataset_builder/LIBERO_Spatial_XYG_extrinsic"
+    # cd "${CUR_PATH}/dataset_git/rlds_dataset_builder/LIBERO_Spatial_XYG_extrinsic"
 
-    export NO_GCE_CHECK="true"
-    export CUDA_VISIBLE_DEVICES=""
+    # export NO_GCE_CHECK="true"
+    # export CUDA_VISIBLE_DEVICES=""
 
-    if [ $num_tasks_in_suite -eq 1 ]; then
-        hdf5_dir="${libero_base_save_dir}_1_hdf5"
-        rlds_dir="${libero_base_save_dir}_1_rlds"
-    elif [ $num_tasks_in_suite -eq 5 ]; then
-        hdf5_dir="${libero_base_save_dir}_split_hdf5"
-        rlds_dir="${libero_base_save_dir}_split_rlds"
-    else
-        hdf5_dir="${libero_base_save_dir}_full_hdf5"
-        rlds_dir="${libero_base_save_dir}_full_rlds"
-    fi
-    user_name="${username}_$(echo ${number_demo_per_task} | awk '{printf "%02d\n", $1}')_$(echo ${demo_repeat_times} | awk '{printf "%02d\n", $1}')_$(echo $viewpoint_rotate_lower_bound | awk '{printf "%.1f\n", $1}')_$(echo $viewpoint_rotate_upper_bound | awk '{printf "%.1f\n", $1}')"
+    # if [ $num_tasks_in_suite -eq 1 ]; then
+    #     hdf5_dir="${libero_base_save_dir}_1_hdf5"
+    #     rlds_dir="${libero_base_save_dir}_1_rlds"
+    # elif [ $num_tasks_in_suite -eq 5 ]; then
+    #     hdf5_dir="${libero_base_save_dir}_split_hdf5"
+    #     rlds_dir="${libero_base_save_dir}_split_rlds"
+    # else
+    #     hdf5_dir="${libero_base_save_dir}_full_hdf5"
+    #     rlds_dir="${libero_base_save_dir}_full_rlds"
+    # fi
+    # user_name="${username}_$(echo ${number_demo_per_task} | awk '{printf "%02d\n", $1}')_$(echo ${demo_repeat_times} | awk '{printf "%02d\n", $1}')_$(echo $viewpoint_rotate_lower_bound | awk '{printf "%.1f\n", $1}')_$(echo $viewpoint_rotate_upper_bound | awk '{printf "%.1f\n", $1}')"
 
-    if [[ $num_tasks_in_suite -eq 1 ]]; then
-        viewpoint_path="v-$(echo $vmin | awk '{printf "%.3f\n", $1}')-$(echo $vmax | awk '{printf "%.3f\n", $1}')_num$(($specify_task_id+1))"
-    else
-        viewpoint_path="v-$(echo $vmin | awk '{printf "%.3f\n", $1}')-$(echo $vmax | awk '{printf "%.3f\n", $1}')_${specify_task_id}"
-    fi
+    # if [[ $num_tasks_in_suite -eq 1 ]]; then
+    #     viewpoint_path="v-$(echo $vmin | awk '{printf "%.3f\n", $1}')-$(echo $vmax | awk '{printf "%.3f\n", $1}')_num$(($specify_task_id+1))"
+    # else
+    #     viewpoint_path="v-$(echo $vmin | awk '{printf "%.3f\n", $1}')-$(echo $vmax | awk '{printf "%.3f\n", $1}')_${specify_task_id}"
+    # fi
 
-    echo "${hdf5_dir}/${user_name}/${viewpoint_path}"
-    echo "${rlds_dir}/${user_name}/${viewpoint_path}"
+    # echo "${hdf5_dir}/${user_name}/${viewpoint_path}"
+    # echo "${rlds_dir}/${user_name}/${viewpoint_path}"
 
-    export XYG_HDF5_PATH="${hdf5_dir}/${user_name}/${viewpoint_path}"
+    # export XYG_HDF5_PATH="${hdf5_dir}/${user_name}/${viewpoint_path}"
 
-    tfds_start_time=$(date +%s)
-    tfds build --data_dir ${rlds_dir}/${user_name}/${viewpoint_path}
-    tfds_end_time=$(date +%s)
-    tfds_delta_time=$((tfds_end_time - tfds_start_time))
-    tfds_hours=$((tfds_delta_time / 3600))
-    tfds_minutes=$((tfds_delta_time % 3600 / 60))
-    tfds_seconds=$((tfds_delta_time % 60))
-    echo "tfds build time: ${tfds_hours}:${tfds_minutes}:${tfds_seconds}"
-    cd ..
-    cd ..
-    cd ..
-    path=$(pwd)
-    echo "current path: ${path}"
+    # tfds_start_time=$(date +%s)
+    # tfds build --data_dir ${rlds_dir}/${user_name}/${viewpoint_path}
+    # tfds_end_time=$(date +%s)
+    # tfds_delta_time=$((tfds_end_time - tfds_start_time))
+    # tfds_hours=$((tfds_delta_time / 3600))
+    # tfds_minutes=$((tfds_delta_time % 3600 / 60))
+    # tfds_seconds=$((tfds_delta_time % 60))
+    # echo "tfds build time: ${tfds_hours}:${tfds_minutes}:${tfds_seconds}"
+    # cd ..
+    # cd ..
+    # cd ..
+    # path=$(pwd)
+    # echo "current path: ${path}"
+    done
 done

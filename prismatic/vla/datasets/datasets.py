@@ -7,10 +7,12 @@ format to OpenVLA, IterableDataset shim.
 
 from dataclasses import dataclass
 from pathlib import Path
+import os
 from typing import Any, Dict, Tuple, Type
 
 import numpy as np
 import torch
+import einops
 from PIL import Image
 from torch.utils.data import Dataset, IterableDataset
 from transformers import PreTrainedTokenizerBase
@@ -24,9 +26,19 @@ from prismatic.vla.datasets.rlds import make_interleaved_dataset, make_single_da
 from prismatic.vla.datasets.rlds.oxe import OXE_NAMED_MIXTURES, get_oxe_dataset_kwargs_and_weights
 from prismatic.vla.datasets.rlds.utils.data_utils import NormalizationType
 
+from lerobot.common.datasets.camera_utils import (
+    PluckerEmbedder,
+    remove_extrinsic_camera_axis_correction,
+    intrinsic_image_size_calibration
+)
+from lerobot.common.datasets.viz_utils import (
+    _get_motion_dynamics_basis,
+    _make_motion_basis_axis_rgb_tensor_cam_to_world,
+    save_rgb_image,
+    _rescale_make_motion_basis_axis_rgb_tensor_cam_to_world,
+)
 # HuggingFace Default / LLaMa-2 IGNORE_INDEX (for labels)
 IGNORE_INDEX = -100
-
 
 @dataclass
 class RLDSBatchTransform:
@@ -37,6 +49,7 @@ class RLDSBatchTransform:
     predict_stop_token: bool = True
     image_window_size: int = 1
     use_wrist_image: bool = False
+    mode: str = "vanilla"
 
     def __call__(self, rlds_batch: Dict[str, Any]) -> Dict[str, Any]:
         """Converts a RLDS batch to the format expected by the OpenVLA collator/models."""
@@ -101,6 +114,79 @@ class RLDSBatchTransform:
         if not self.predict_stop_token:
             labels[-num_end_tokens:] = IGNORE_INDEX
 
+        # Plucker
+        if "intrinsic_matrix" in rlds_batch and "extrinsic_matrix" in rlds_batch:
+            intrinsic_tensor = torch.from_numpy(rlds_batch["intrinsic_matrix"]).float()
+            intrinsic_tensor = intrinsic_image_size_calibration(intrinsic_tensor)
+
+            extrinsic_tensor = torch.from_numpy(rlds_batch["extrinsic_matrix"]).float()
+            plucker_extrinsic_tensor = remove_extrinsic_camera_axis_correction(extrinsic_tensor)
+
+            img_size = pixel_values['siglip'].size()[-2]
+            if self.mode == "plucker":
+                with torch.no_grad():
+                    plucker_embedder = PluckerEmbedder(img_size=img_size, device='cpu')
+                    plucker_data = plucker_embedder(intrinsic_tensor, plucker_extrinsic_tensor)
+                    plucker_tensor = einops.rearrange(plucker_data['plucker'], 'h w c -> c h w').to('cuda', non_blocking=True)
+                pixel_values['plucker'] = plucker_tensor
+            elif self.mode == "basis":
+                with torch.no_grad():
+                    state = rlds_batch["observation"]["eef_state"]
+
+                    motion_dynamics_basis = _get_motion_dynamics_basis(intrinsic_tensor, cam_to_world=plucker_extrinsic_tensor).reshape(-1)
+
+                    axis_tensor, origin_xy = _make_motion_basis_axis_rgb_tensor_cam_to_world(
+                        rgb_tensor=pixel_values["siglip"].to('cpu'),                  # (B, 3,H,W)
+                        motion_dynamics_basis=motion_dynamics_basis,
+                        cam_to_world=plucker_extrinsic_tensor,                  # cam_pose = cam_to_world (고정)
+                        intrinsic_matrix=intrinsic_tensor,
+                        robot_eef_abs_poses=state[:, :7],  # eef pose (B, 7)
+                        origin_robot=True,
+                        origin_fallback="pp",
+                        arrow_len=60,
+                        return_overlay=False,
+                    )
+                    # save_rgb_image(pixel_values["siglip"].to('cpu'), "basis.png")
+                pixel_values['basis'] = axis_tensor.to('cuda', non_blocking=True)
+            elif self.mode == "basis_rescale":
+                with torch.no_grad():
+                    state = rlds_batch["observation"]["eef_state"]
+                    axis_tensor, origin_xy = _rescale_make_motion_basis_axis_rgb_tensor_cam_to_world(
+                        rgb_tensor=pixel_values["siglip"].to('cpu'),                  # (B, 3,H,W)
+                        cam_to_world=plucker_extrinsic_tensor,                  # cam_pose = cam_to_world (고정)
+                        intrinsic_matrix=intrinsic_tensor,
+                        robot_eef_abs_poses=state[:, :7],  # eef pose (B, 7)
+                        origin_robot=True,
+                        origin_fallback="pp",
+                        arrow_len=60,
+                        return_overlay=False,
+                    )
+                    # save_rgb_image(pixel_values["siglip"].to('cpu'), "basis_rescale.png")
+                pixel_values['basis'] = axis_tensor.to('cuda', non_blocking=True)
+            elif self.mode == "basis_rescale_concat":
+                with torch.no_grad():
+                    state = rlds_batch["observation"]["eef_state"]
+                    axis_tensor, origin_xy = _rescale_make_motion_basis_axis_rgb_tensor_cam_to_world(
+                        rgb_tensor=pixel_values["siglip"],                  # (B, 3,H,W)
+                        cam_to_world=plucker_extrinsic_tensor,                  # cam_pose = cam_to_world (고정)
+                        intrinsic_matrix=intrinsic_tensor,
+                        robot_eef_abs_poses=state[:, :7],  # eef pose (B, 7)
+                        origin_robot=True,
+                        origin_fallback="pp",
+                        arrow_len=60,
+                        return_overlay=False,
+                    )
+                    pixel_values['dino'] = torch.cat([pixel_values['dino'], axis_tensor], dim=0)
+                    pixel_values['siglip'] = torch.cat([pixel_values['siglip'], axis_tensor], dim=0)
+            elif self.mode == "plucker_concat":
+                with torch.no_grad():
+                    plucker_embedder = PluckerEmbedder(img_size=img_size, device='cpu')
+                    plucker_data = plucker_embedder(intrinsic_tensor, plucker_extrinsic_tensor)
+                    plucker_tensor = einops.rearrange(plucker_data['plucker'], 'h w c -> c h w')
+                pixel_values['dino'] = torch.cat([pixel_values['dino'], plucker_tensor], dim=0)
+                pixel_values['siglip'] = torch.cat([pixel_values['siglip'], plucker_tensor], dim=0)
+
+
         return dict(pixel_values=pixel_values, input_ids=input_ids, labels=labels, dataset_name=dataset_name)
 
 
@@ -117,6 +203,7 @@ class RLDSDataset(IterableDataset):
         future_action_window_size: int = 0,
         image_window_size: int = 1,
         load_camera_views: tuple = ("primary",),
+        mode: str = "vanilla"
     ) -> None:
         """Lightweight wrapper around RLDS TFDS Pipeline for use with PyTorch/OpenVLA Data Loaders."""
         self.data_root_dir, self.data_mix, self.batch_transform = data_root_dir, data_mix, batch_transform
@@ -124,6 +211,13 @@ class RLDSDataset(IterableDataset):
         # Configure RLDS Dataset(s)
         if self.data_mix in OXE_NAMED_MIXTURES:
             mixture_spec = OXE_NAMED_MIXTURES[self.data_mix]
+        # Enable loading datasets from specified directory without creating mixture
+        elif (self.data_root_dir / self.data_mix).is_dir():
+            print(f"Loading datasets from directory {self.data_mix}")
+            mixture_spec = []
+            for path in sorted(Path(self.data_root_dir / self.data_mix).iterdir()):
+                if path.is_dir():
+                    mixture_spec.append((str(path.relative_to(self.data_root_dir)), 1.0))
         else:
             # Assume that passed "mixture" name is actually a single dataset -- create single-dataset "mix"
             mixture_spec = [(self.data_mix, 1.0)]
@@ -134,7 +228,7 @@ class RLDSDataset(IterableDataset):
             mixture_spec,
             load_camera_views=load_camera_views,
             load_depth=False,
-            load_proprio=False,
+            load_proprio=(mode == "basis") or (mode == "basis_rescale") or (mode == "basis_rescale_concat"),
             load_language=True,
             action_proprio_normalization_type=NormalizationType.BOUNDS_Q99,
         )

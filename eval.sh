@@ -1,0 +1,3 @@
+bash base_eval_libero_spatial_custom_cam_info.sh
+bash base_eval_libero_spatial_custom.sh
+bash base_eval_libero_spatial_custom_cam_info_2.sh

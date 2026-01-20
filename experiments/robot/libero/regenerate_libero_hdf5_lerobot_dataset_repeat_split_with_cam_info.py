@@ -202,6 +202,24 @@ def main(args):
         print(f"Removing existing dataset at {lerobot_output_path}")
         raise ValueError(f"Dataset already exists at {lerobot_output_path}")
         shutil.rmtree(lerobot_output_path)
+
+    for task_id in task_id_list:
+        # Get task in suite
+        task = task_suite.get_task(task_id)
+        # Get dataset for task
+        orig_data_path = os.path.join(args.libero_raw_data_dir, f"{task.name}_demo.hdf5")
+        assert os.path.exists(orig_data_path), f"Cannot find raw data file {orig_data_path}."
+        orig_data_file = h5py.File(orig_data_path, "r")
+        orig_data = orig_data_file["data"]
+        for orig_data_key in orig_data.keys():  # demo_0, demo_1, ..., demo_49, ...
+            # get demo data
+            i = int(orig_data_key.split("_")[-1])
+            demo_data = orig_data[f"demo_{i}"]
+            orig_actions = demo_data["actions"][()]     #  The () is used to indicate that you want to read the entire dataset
+            orig_states = demo_data["states"][()]
+            break
+        break 
+    dim = orig_states[0].shape
     dataset = LeRobotDataset.create(
         repo_id=repo_name,
         robot_type="panda",
@@ -225,7 +243,7 @@ def main(args):
             },
             "observation.environment_state": {      # 不同的环境environment_state 的维度不一样
                 "dtype": "float32",
-                "shape": (92,),
+                "shape": dim,
                 "names": ["state"],
             },
             "action": {
@@ -238,6 +256,14 @@ def main(args):
                 "shape": (3, 3),
             },
             "extrinsic_matrix": {
+                "dtype": "float32",
+                "shape": (4, 4),
+            },
+            "wrist_intrinsic_matrix": {
+                "dtype": "float32",
+                "shape": (3, 3),
+            },
+            "wrist_extrinsic_matrix": {
                 "dtype": "float32",
                 "shape": (4, 4),
             },
@@ -293,6 +319,9 @@ def main(args):
             eye_in_hand_images_list = []
             intrinsic_matrix_list = []
             extrinsic_matrix_list = []
+            wrist_intrinsic_matrix_list = []
+            wrist_extrinsic_matrix_list = []
+
             for repeat_idx in range(2): # min(demo_repeat_times, 2) -> 2
                 # Reset environment, set initial state, and wait a few steps for environment to settle
                 env.reset()
@@ -311,8 +340,11 @@ def main(args):
                 else:
                     env = rotate_recolor_dataset.rotate_camera(env, camera_id=camera_id, camera_name=camera_name, robot_base_name=robot_base_name, 
                                                               theta=viewpoint_rotate, debug=False)
-                env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
-                
+                if args.for_dp:
+                    try:
+                        env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
+                    except:
+                        pass
                 for _ in range(10):
                     obs, reward, done, info = env.step(get_libero_dummy_action("llava"))
 
@@ -323,10 +355,14 @@ def main(args):
                 extrinsic_matrix = CU.get_camera_extrinsic_matrix(env.sim, camera_name)
                 intrinsic_matrices = []
                 extrinsic_matrices = []
+                wrist_intrinsic_matrices = []
+                wrist_extrinsic_matrices = []
                 # Replay original demo actions in environment and record observations
                 for _, action in enumerate(orig_actions):
                     # Skip transitions with no-op actions
                     prev_action = actions[-1] if len(actions) > 0 else None
+                    wrist_intrinsic_matrix = CU.get_camera_intrinsic_matrix(env.sim, 'robot0_eye_in_hand', height, width)
+                    wrist_extrinsic_matrix = CU.get_camera_extrinsic_matrix(env.sim, 'robot0_eye_in_hand')
                     if is_noop(action, prev_action):
                         print(f"\tSkipping no-op action: {action}")
                         num_noops += 1
@@ -360,6 +396,8 @@ def main(args):
                     eye_in_hand_images.append(obs["robot0_eye_in_hand_image"])
                     intrinsic_matrices.append(intrinsic_matrix)
                     extrinsic_matrices.append(extrinsic_matrix)
+                    wrist_intrinsic_matrices.append(wrist_intrinsic_matrix)
+                    wrist_extrinsic_matrices.append(wrist_extrinsic_matrix)
                     # Execute demo action in environment
                     obs, reward, done, info = env.step(action.tolist())
 
@@ -375,6 +413,8 @@ def main(args):
                 eye_in_hand_images_list.append(eye_in_hand_images)
                 intrinsic_matrix_list.append(intrinsic_matrices)
                 extrinsic_matrix_list.append(extrinsic_matrices)
+                wrist_intrinsic_matrix_list.append(wrist_intrinsic_matrices)
+                wrist_extrinsic_matrix_list.append(wrist_extrinsic_matrices)
 
             if sum(done_list) == len(done_list):    # 没有这个条件就放弃这个trajectory了。
                 rep_idx = 0
@@ -394,6 +434,8 @@ def main(args):
                                     "action": actions[lerobot_idx].astype(np.float32),
                                     "intrinsic_matrix": np.array(intrinsic_matrices[lerobot_idx]).astype(np.float32),
                                     "extrinsic_matrix": np.array(extrinsic_matrices[lerobot_idx]).astype(np.float32),
+                                    "wrist_intrinsic_matrix": np.array(wrist_intrinsic_matrices[lerobot_idx]).astype(np.float32),
+                                    "wrist_extrinsic_matrix": np.array(wrist_extrinsic_matrices[lerobot_idx]).astype(np.float32),
                                 }
                             )
                         dataset.save_episode()
@@ -423,6 +465,8 @@ def main(args):
                             ep_data_grp.create_dataset("dones", data=dones)
                             ep_data_grp.create_dataset("intrinsic_matrices", data=np.array(intrinsic_matrices).astype(np.float32))
                             ep_data_grp.create_dataset("extrinsic_matrices", data=np.array(extrinsic_matrices).astype(np.float32))
+                            ep_data_grp.create_dataset("wrist_intrinsic_matrices", data=np.array(wrist_intrinsic_matrices).astype(np.float32))
+                            ep_data_grp.create_dataset("wrist_extrinsic_matrices", data=np.array(wrist_extrinsic_matrices).astype(np.float32))
                             time_cal_2 = time.time()
                             TIME_COUNTER['hdf5_gen'] += time_cal_2 - time_cal_1                        
 
@@ -474,8 +518,11 @@ def main(args):
                                                                 theta=viewpoint_rotate, debug=False)
                     
                     # change the transparency of the transparent object
-                    env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
-                    
+                    if args.for_dp:
+                        try:
+                            env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
+                        except:
+                            pass
                     for _ in range(10):
                         obs, reward, done, info = env.step(get_libero_dummy_action("llava"))
 
@@ -486,10 +533,14 @@ def main(args):
                     extrinsic_matrix = CU.get_camera_extrinsic_matrix(env.sim, camera_name)
                     intrinsic_matrices = []
                     extrinsic_matrices = []
+                    wrist_intrinsic_matrices = []
+                    wrist_extrinsic_matrices = []
                     # Replay original demo actions in environment and record observations
                     for _, action in enumerate(orig_actions):
                         # Skip transitions with no-op actions
                         prev_action = actions[-1] if len(actions) > 0 else None
+                        wrist_intrinsic_matrix = CU.get_camera_intrinsic_matrix(env.sim, 'robot0_eye_in_hand', height, width)
+                        wrist_extrinsic_matrix = CU.get_camera_extrinsic_matrix(env.sim, 'robot0_eye_in_hand')
                         if is_noop(action, prev_action):
                             print(f"\tSkipping no-op action: {action}")
                             num_noops += 1
@@ -527,6 +578,8 @@ def main(args):
 
                         intrinsic_matrices.append(intrinsic_matrix)
                         extrinsic_matrices.append(extrinsic_matrix)
+                        wrist_intrinsic_matrices.append(wrist_intrinsic_matrix)
+                        wrist_extrinsic_matrices.append(wrist_extrinsic_matrix)
                         # Execute demo action in environment
                         obs, reward, done, info = env.step(action.tolist())
                     
@@ -545,6 +598,8 @@ def main(args):
                                     "action": actions[lerobot_idx].astype(np.float32),
                                     "intrinsic_matrix": np.array(intrinsic_matrices[lerobot_idx]).astype(np.float32),
                                     "extrinsic_matrix": np.array(extrinsic_matrices[lerobot_idx]).astype(np.float32),
+                                    "wrist_intrinsic_matrix": np.array(wrist_intrinsic_matrices[lerobot_idx]).astype(np.float32),
+                                    "wrist_extrinsic_matrix": np.array(wrist_extrinsic_matrices[lerobot_idx]).astype(np.float32),
                                 }
                             )
                         
@@ -575,6 +630,8 @@ def main(args):
                             ep_data_grp.create_dataset("dones", data=dones)
                             ep_data_grp.create_dataset("intrinsic_matrices", data=np.array(intrinsic_matrices).astype(np.float32))
                             ep_data_grp.create_dataset("extrinsic_matrices", data=np.array(extrinsic_matrices).astype(np.float32))
+                            ep_data_grp.create_dataset("wrist_intrinsic_matrices", data=np.array(wrist_intrinsic_matrices).astype(np.float32))
+                            ep_data_grp.create_dataset("wrist_extrinsic_matrices", data=np.array(wrist_extrinsic_matrices).astype(np.float32))
                             time_cal_2 = time.time()
                             TIME_COUNTER['hdf5_gen'] += time_cal_2 - time_cal_1
 
@@ -787,6 +844,13 @@ if __name__ == "__main__":
         help="need color change",
         default="True"
     )
+
+    parser.add_argument(
+        "--for_dp",
+        type=str,
+        help="for dp",
+        default="True"
+    )
     
     
     args = parser.parse_args()
@@ -800,6 +864,7 @@ if __name__ == "__main__":
     args.change_light = args.change_light.lower() == "true"
     args.need_color_change = args.need_color_change.lower() == "true"
     args.need_hdf5 = args.need_hdf5.lower() == "true"
+    args.for_dp = args.for_dp.lower() == "true"
     
     # Start data regeneration
     import time

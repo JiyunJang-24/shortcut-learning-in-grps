@@ -406,14 +406,13 @@ def eval_libero(cfg: GenerateConfig) -> None:
             else:
                 if cfg.robot != "Panda":
                     env = rotate_recolor_dataset.rotate_camera_ur5e(env=franka_env, ur5e_env=env, camera_id=camera_id, camera_name=camera_name, 
-                                                            robot_base_name=robot_base_name, theta=viewpoint_rotate, debug=False)
+                                                            robot_base_name=robot_base_name, theta=viewpoint_rotate, reposition_camera_scale=reposition_camera_scale, debug=False)
                 else:
                     env = rotate_recolor_dataset.rotate_camera(env=env, camera_id=camera_id, camera_name=camera_name, 
-                                                           robot_base_name=robot_base_name, theta=viewpoint_rotate, debug=False)
+                                                           robot_base_name=robot_base_name, theta=viewpoint_rotate, reposition_camera_scale=reposition_camera_scale, debug=False)
             
             # change the transparency of the transparent object
-            env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
-            
+            # env = rotate_recolor_dataset.change_object_transparency(env, object_name=transparent_object_name, alpha=transparent_alpha, debug=False)
             # Set initial states
             height, width, channel = obs["agentview_image"].shape
             intrinsic_matrix = torch.from_numpy(CU.get_camera_intrinsic_matrix(env.sim, camera_name, height, width)).float()

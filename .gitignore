@@ -156,7 +156,7 @@ wandb/
 # xyg add
 vq
 datasets_vis/
-logs/
+
 visualize-v-0.25-0.25-c-0.25-0.25/
 visualize-*-full/
 experiments-island/
@@ -187,3 +187,16 @@ dataset_git/yujin/
 logs-angle-test/
 cam_info_*/
 eef_*/
+logs-angle-test-ur5e/
+multi_task_*/
+experiments/robot/libero/*.json
+
+
+logs/*
+*.zip
+miniVLA/
+extrinsic_analysis/
+vla_cam_info*/
+DP_cam_info*/
+DP_wrist_cam_info*/
+DP_wirst*/

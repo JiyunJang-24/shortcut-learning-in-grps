@@ -7,18 +7,19 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -
 REPO_ROOT="${SCRIPT_DIR}"
 export PYTHONPATH="${REPO_ROOT}/LIBERO:${PYTHONPATH}"
 
-base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2026-01-15/12-24-22_DP_spatial_angle_from_0_22.5_45_337.5_315_task_0"
+base_ckpt_dir="${REPO_ROOT}/lerobot/outputs/train/2026-01-08/21-12-17_DP_panda_0_45_315_ur5_22.5_337.5_task_0"
 checkpoint_dir="${base_ckpt_dir}/checkpoints"
 checkpoint_step="100000"
 ckpt_path="${checkpoint_dir}/${checkpoint_step}/pretrained_model"
-log_root="./logs-angle-test"
+log_root="./logs-angle-test-ur5e"
 export MUJOCO_GL=egl
-angles=(22.5 45 337.5 315 35 40 325 320)
+# export MUJOCO_EGL_DEVICE_ID=3
+# angles=(0 22.5 45)
+# tasks=(0 4)       # 0=A, 4=B
+seeds=(12)
+angles=(22.5)
 tasks=(0)       # 0=A, 4=B
-seeds=(7 8 9)
-# angles=(0)
-# tasks=(0)       # 0=A, 4=B
-# seeds=(7)
+# seeds=(14)
 export PYTHONUNBUFFERED=1
 mkdir -p "${log_root}"
 # 실행
@@ -28,7 +29,8 @@ for seed in "${seeds[@]}"; do
       for angle in "${angles[@]}"; do
         outdir="${log_root}/seed_${seed}/task_${task}/angle_${angle}"
         mkdir -p "$outdir"
-        python -u experiments/robot/libero/run_libero_eval_dp_minivla.py \
+
+      python -u experiments/robot/libero/run_libero_eval_dp_minivla_cam_info_cross_embodiment.py \
           --model_family diffusion \
           --pretrained_checkpoint "${ckpt_path}" \
           --task_suite_name libero_spatial \
@@ -45,7 +47,11 @@ for seed in "${seeds[@]}"; do
           --need_color_change false \
           --specific_task_id "${task}" \
           --local_log_dir "${outdir}" \
-          --seed "${seed}" 
+          --seed "${seed}" \
+          --use_plucker false \
+          --use_dynamics_basis false \
+          --robot "Panda" \
+          --gripper_type "default"
       done
     done
   ) &

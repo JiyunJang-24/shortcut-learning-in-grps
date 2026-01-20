@@ -45,13 +45,13 @@ def get_libero_env(task, model_family, resolution=256):
     task_description = task.language
     task_bddl_file = os.path.join(get_libero_path("bddl_files"), task.problem_folder, task.bddl_file)
     env_args = {
-        "bddl_file_name": task_bddl_file, 
-        "camera_heights": resolution, 
-        "camera_widths": resolution, 
+        "bddl_file_name": task_bddl_file,
+        "camera_heights": resolution,
+        "camera_widths": resolution,
         "hard_reset": False,
-        "has_renderer": True, 
-        "has_offscreen_renderer": False, 
-        "use_camera_obs": False, 
+        "has_renderer": True,
+        "has_offscreen_renderer": False,
+        "use_camera_obs": False,
         "render_camera": CAMERA_NAME
     }
     env = ControlEnv(**env_args)
@@ -113,44 +113,44 @@ def rotate_camera_based_on_robot_base(cur_camera_pos, cur_camera_quat, robot_bas
     # camera pose and robot base pose in world frame
     camera_world_pose = Pose(cur_camera_pos, cur_camera_quat)
     robot_world_pose = Pose(robot_base_pos, robot_base_quat)
-    
+
     robot_robot_pose = Pose(np.array([0, 0, 0]), np.array([1, 0, 0, 0]))
-    
+
     world_to_robot_transform = robot_robot_pose.transform(robot_world_pose.inverse())
-    
+
     # camera pose in robot frame
     camera_robot_pose = world_to_robot_transform.transform(camera_world_pose)
-    
+
     # 沿着 z 轴旋转 theta 度
     new_camera_robot_pose = Pose(np.array([0, 0, 0]), euler.euler2quat(0, 0, theta / 180 * np.pi)).transform(camera_robot_pose)
-    
+
     # camera pose in world frame
     new_camera_world_pose = world_to_robot_transform.inverse().transform(new_camera_robot_pose)
-    
-    return new_camera_world_pose.get_position(), new_camera_world_pose.get_orientation()
-    
 
-def rotate_camera(env, camera_id, camera_name, robot_base_name="robot0_base", theta=0.0, debug=False):
+    return new_camera_world_pose.get_position(), new_camera_world_pose.get_orientation()
+
+
+def rotate_camera(env, camera_id, camera_name, robot_base_name="robot0_base", theta=0.0, reposition_camera_scale=1.0, debug=False):
     cur_camera_pos = env.sim.model.cam_pos[camera_id].copy()
     cur_camera_quat = env.sim.model.cam_quat[camera_id].copy()
     robot_base_id = env.sim.model.body_name2id(robot_base_name)
     robot_base_pos = env.sim.model.body_pos[robot_base_id].copy()
     robot_base_quat = env.sim.model.body_quat[robot_base_id].copy()
-    
+
     if not MUJOCO_WXYZ: # xyzw -> wxyz
         cur_camera_quat = np.array([cur_camera_quat[3], cur_camera_quat[0], cur_camera_quat[1], cur_camera_quat[2]])
         robot_base_quat = np.array([robot_base_quat[3], robot_base_quat[0], robot_base_quat[1], robot_base_quat[2]])
-    
-    tgt_camera_pos, tgt_camera_quat = rotate_camera_based_on_robot_base(cur_camera_pos, cur_camera_quat, 
+
+    tgt_camera_pos, tgt_camera_quat = rotate_camera_based_on_robot_base(cur_camera_pos, cur_camera_quat,
                                                                         robot_base_pos, robot_base_quat, theta)
-    
+
     if not MUJOCO_WXYZ: # wxyz -> xyzw
         tgt_camera_quat = np.array([tgt_camera_quat[1], tgt_camera_quat[2], tgt_camera_quat[3], tgt_camera_quat[0]])
-    
+
     env.sim.model.cam_pos[camera_id] = tgt_camera_pos
     env.sim.model.cam_quat[camera_id] = tgt_camera_quat
     env.sim.forward()
-    
+    env = reposition_camera(env, camera_name, camera_id, robot_base_name, scale=reposition_camera_scale, debug=debug)
     if debug:
         camera_img = env.sim.render(
             camera_name=camera_name,  # 指定相机名称
@@ -159,32 +159,90 @@ def rotate_camera(env, camera_id, camera_name, robot_base_name="robot0_base", th
             depth=False,                # 是否需要深度图
             mode='offscreen'            # 离屏渲染模式
         )
-        
+
         Image.fromarray(camera_img[::-1]).save(os.path.join(IMAGE_SAVE_PATH, f"rotate_{theta:.2f}.png"))
     return env
 
+def reposition_camera(
+        env,
+        camera_name: str,
+        camera_id: int,
+        robot_base_name: str = "robot0_base",
+        scale: float = 0.85,          # 0.85면 베이스 쪽으로 15% 가까워짐, 1.15면 15% 멀어짐
+        debug: bool = False,
+    ):
+    # --- target(base) world pos ---
+    base_id = env.sim.model.body_name2id(robot_base_name)
+    base_pos_w = env.sim.data.xpos[base_id].copy()   # world
 
-def rotate_camera_ur5e(env, ur5e_env, camera_id, camera_name, robot_base_name="robot0_base", theta=0.0, debug=False):
+    # --- camera current world pos ---
+    cam_bodyid = int(env.sim.model.cam_bodyid[camera_id])
+    if cam_bodyid == -1:
+        # camera is defined in world frame
+        cam_pos_w = env.sim.model.cam_pos[camera_id].copy()
+    else:
+        # camera is defined in cam_body local frame -> convert local -> world
+        body_pos_w = env.sim.data.xpos[cam_bodyid].copy()
+        body_R_w = env.sim.data.xmat[cam_bodyid].reshape(3, 3).copy()
+        cam_pos_local = env.sim.model.cam_pos[camera_id].copy()
+        cam_pos_w = body_pos_w + body_R_w @ cam_pos_local
+
+    # --- move along line: base + scale*(cam-base) ---
+    v = cam_pos_w - base_pos_w
+    new_cam_pos_w = base_pos_w + scale * v
+
+    # --- write back to model.cam_pos (world or local depending on cam_bodyid) ---
+    if cam_bodyid == -1:
+        env.sim.model.cam_pos[camera_id] = new_cam_pos_w
+    else:
+        body_pos_w = env.sim.data.xpos[cam_bodyid].copy()
+        body_R_w = env.sim.data.xmat[cam_bodyid].reshape(3, 3).copy()
+        new_cam_pos_local = body_R_w.T @ (new_cam_pos_w - body_pos_w)
+        env.sim.model.cam_pos[camera_id] = new_cam_pos_local
+
+    env.sim.forward()
+    if debug:
+        camera_img = env.sim.render(
+            camera_name=camera_name,  # 指定相机名称
+            width=IMAGE_RESOLUTION,                  # 图像宽度
+            height=IMAGE_RESOLUTION,                 # 图像高度
+            depth=False,                # 是否需要深度图
+            mode='offscreen'            # 离屏渲染模式
+        )
+
+        Image.fromarray(camera_img[::-1]).save(os.path.join(IMAGE_SAVE_PATH, f"scale_{scale:.2f}.png"))
+    return env
+
+def rotate_camera_ur5e(env, ur5e_env, camera_id, camera_name, robot_base_name="robot0_base", theta=0.0, reposition_camera_scale=1.0, debug=False):
     cur_camera_pos = env.sim.model.cam_pos[camera_id].copy()
     cur_camera_quat = env.sim.model.cam_quat[camera_id].copy()
     robot_base_id = env.sim.model.body_name2id(robot_base_name)
     robot_base_pos = env.sim.model.body_pos[robot_base_id].copy()
     robot_base_quat = env.sim.model.body_quat[robot_base_id].copy()
-    
+
     if not MUJOCO_WXYZ: # xyzw -> wxyz
         cur_camera_quat = np.array([cur_camera_quat[3], cur_camera_quat[0], cur_camera_quat[1], cur_camera_quat[2]])
         robot_base_quat = np.array([robot_base_quat[3], robot_base_quat[0], robot_base_quat[1], robot_base_quat[2]])
-    
-    tgt_camera_pos, tgt_camera_quat = rotate_camera_based_on_robot_base(cur_camera_pos, cur_camera_quat, 
+
+    tgt_camera_pos, tgt_camera_quat = rotate_camera_based_on_robot_base(cur_camera_pos, cur_camera_quat,
                                                                         robot_base_pos, robot_base_quat, theta)
-    
+
     if not MUJOCO_WXYZ: # wxyz -> xyzw
         tgt_camera_quat = np.array([tgt_camera_quat[1], tgt_camera_quat[2], tgt_camera_quat[3], tgt_camera_quat[0]])
-    
+
     ur5e_env.sim.model.cam_pos[camera_id] = tgt_camera_pos
     ur5e_env.sim.model.cam_quat[camera_id] = tgt_camera_quat
     ur5e_env.sim.forward()
-    
+
+    env.sim.model.cam_pos[camera_id] = tgt_camera_pos
+    env.sim.model.cam_quat[camera_id] = tgt_camera_quat
+    env.sim.forward()
+
+    env = reposition_camera(env, camera_name, camera_id, robot_base_name, scale=reposition_camera_scale, debug=debug)
+    ur5e_env.sim_model.cam_pos[camera_id] = env.sim.model.cam_pos[camera_id].copy()
+    ur5e_env.sim.model.cam_quat[camera_id] = env.sim.model.cam_quat[camera_id].copy()
+    ur5e_env.sim.forward()
+
     if debug:
         camera_img = ur5e_env.sim.render(
             camera_name=camera_name,  # 指定相机名称
@@ -193,7 +251,7 @@ def rotate_camera_ur5e(env, ur5e_env, camera_id, camera_name, robot_base_name="r
             depth=False,                # 是否需要深度图
             mode='offscreen'            # 离屏渲染模式
         )
-        
+
         Image.fromarray(camera_img[::-1]).save(os.path.join(IMAGE_SAVE_PATH, f"rotate_{theta:.2f}.png"))
     return ur5e_env
 
@@ -210,14 +268,14 @@ def change_env_light(env, light_id, color, specular, ambient, diffuse, active):
         else:
             print("环境中没有光源")
             return False
-    
+
     # 修改光源颜色
     if color is not None:
         env.sim.model.light_specular[light_id] = color
         env.sim.model.light_diffuse[light_id] = color
         env.sim.model.light_ambient[light_id] = [c * 0.1 for c in color]  # 环境光通常较弱
         # print(f"光源颜色设置为 {color}")
-        
+
     # 单独修改各光照分量
     if specular is not None:
         if isinstance(specular, float):
@@ -225,79 +283,79 @@ def change_env_light(env, light_id, color, specular, ambient, diffuse, active):
         else:
             env.sim.model.light_specular[light_id] = specular
         # print(f"镜面反射设置为 {specular}")
-    
+
     if ambient is not None:
         if isinstance(ambient, float):
             env.sim.model.light_ambient[light_id] *= ambient
         else:
             env.sim.model.light_ambient[light_id] = ambient
         # print(f"环境光设置为 {ambient}")
-    
+
     if diffuse is not None:
         if isinstance(diffuse, float):
             env.sim.model.light_diffuse[light_id] *= diffuse
         else:
             env.sim.model.light_diffuse[light_id] = diffuse
         # print(f"漫反射设置为 {diffuse}")
-    
+
     # 开启/关闭光源
     if active is not None:
         env.sim.model.light_active[light_id] = 1 if active else 0
         # print(f"光源已{'激活' if active else '关闭'}")
 
 
-def recolor_scene(env, alpha, color_light_a, color_light_b, need_print_all_light=False, debug=False, need_change_light=False, base_num=0.1):    
+def recolor_scene(env, alpha, color_light_a, color_light_b, need_print_all_light=False, debug=False, need_change_light=False, base_num=0.1):
     light_name_list = ["light1", "light2"]
     light_id_list = [env.sim.model.light_name2id(light_name) for light_name in light_name_list]
-    
+
     light_id = None
     color = color_interpolation(color_light_a, color_light_b, alpha)
-    
-    
+
+
     if need_change_light:
         factor = 1.0
         specular, ambient, diffuse = base_num + alpha * factor, base_num + alpha * factor, base_num + alpha * factor
         active = None
     else:
         specular, ambient, diffuse, active = None, None, None, None
-    
+
     # 获取光源ID
     if need_print_all_light and env.sim.model.nlight > 0:
         print("可用光源:")
         for i in range(env.sim.model.nlight):
             name = env.sim.model.light_id2name(i) if hasattr(env.sim.model, "light_id2name") else f"light_{i}"
             print(f"  ID {i}: {name}")
-    
+
     # 如果没有提供ID或名称，默认使用第一个光源
     for light_id in light_id_list:
         change_env_light(env, light_id, color, specular, ambient, diffuse, active)
-    
+
     # 更新物理状态
     env.sim.forward()
-    
+
     # 渲染一张图像验证效果
     if debug:
         img = env.sim.render(
-            width=IMAGE_RESOLUTION, 
-            height=IMAGE_RESOLUTION, 
+            width=IMAGE_RESOLUTION,
+            height=IMAGE_RESOLUTION,
             camera_name=CAMERA_NAME
         )
-        
-        Image.fromarray(img[::-1]).save(os.path.join(IMAGE_SAVE_PATH, f"basenum_{base_num:.2f}_color_{alpha:.2f}_light_{need_change_light}.png"))
-    
-    return env
-    
 
-def recolor_and_rotate_scene(env, alpha, color_light_a, color_light_b, camera_id, 
+        Image.fromarray(img[::-1]).save(os.path.join(IMAGE_SAVE_PATH, f"basenum_{base_num:.2f}_color_{alpha:.2f}_light_{need_change_light}.png"))
+
+    return env
+
+
+def recolor_and_rotate_scene(env, alpha, color_light_a, color_light_b, camera_id,
                              camera_name, robot_base_name, theta, debug=True, need_change_light=False, base_num=0.5):
     env = recolor_scene(env, alpha, color_light_a, color_light_b, need_change_light=need_change_light, base_num=base_num)
     env = rotate_camera(env, camera_id, camera_name, robot_base_name, theta)
-    
+
     if debug:
         env.sim.forward()
         img = env.sim.render(
-            width=IMAGE_RESOLUTION, 
-            height=IMAGE_RESOLUTION, 
+            width=IMAGE_RESOLUTION,
+            height=IMAGE_RESOLUTION,
             camera_name=CAMERA_NAME
         )
         Image.fromarray(img[::-1]).save(os.path.join(IMAGE_SAVE_PATH, f"light_{alpha:.2f}_rotate_{theta:.2f}.png"))
@@ -309,7 +367,7 @@ def change_object_transparency(env, object_name, alpha=1.0, debug=False):
     for i, name in enumerate(env.sim.model.body_names):
         if name and object_name in name:
             object_ids.append(i)
-    
+
     if not object_ids:
         raise ValueError(f"找不到名称包含 '{object_name}' 的物体!")
 
@@ -323,42 +381,76 @@ def change_object_transparency(env, object_name, alpha=1.0, debug=False):
                     # 修改透明度
                     if alpha is not None:
                         current_rgba[3] = alpha
-                    
+
                     env.sim.model.geom_rgba[geom_id] = current_rgba
-    
+
     env.sim.forward()
-    
+
     img = env.sim.render(
-        width=IMAGE_RESOLUTION, 
-        height=IMAGE_RESOLUTION, 
+        width=IMAGE_RESOLUTION,
+        height=IMAGE_RESOLUTION,
         camera_name=CAMERA_NAME
     )
-    
+
     if debug:
         Image.fromarray(img[::-1]).save(os.path.join(IMAGE_SAVE_PATH, f"object_observation_transparency_{alpha:.2f}.png"))
-    
+
     return env
-    
-    
+
+
+def rotate_object(env, object_name, theta_deg):
+    # theta_deg: degrees to rotate around the vertical (Z) axis
+    rad = np.deg2rad(theta_deg)
+
+    # 1. Create a rotation quaternion for Z-axis (wxyz format)
+    # [cos(a/2), 0, 0, sin(a/2)]
+    rot_quat = np.array([np.cos(rad/2), 0, 0, np.sin(rad/2)])
+
+    # 2. Find the body IDs (using your existing logic)
+    object_ids = [i for i, name in enumerate(env.sim.model.body_names) if name and object_name in name]
+    for body_id in object_ids:
+        # --- A. Update the Model Pose (Static/Initialization) ---
+        # This affects the "rest" pose in the model
+        current_model_quat = env.sim.model.body_quat[body_id].copy()
+        new_model_quat = quaternions.qmult(rot_quat, current_model_quat)
+        env.sim.model.body_quat[body_id] = new_model_quat
+
+        # --- B. Update the Simulation Data (Dynamic State) ---
+        # If the object has a "free joint" (movable), you must update the qpos,
+        # otherwise the physics engine will snap it back to its old pose.
+        if env.sim.model.body_jntnum[body_id] > 0:
+            jnt_adr = env.sim.model.body_jntadr[body_id]
+            # Check if it's a free joint (mjtJoint.mjJNT_FREE = 0)
+            if env.sim.model.jnt_type[jnt_adr] == 0:
+                qpos_adr = env.sim.model.jnt_qposadr[jnt_adr]
+                # qpos for free joint is 7 elements: [x, y, z, qw, qx, qy, qz]
+                current_data_quat = env.sim.data.qpos[qpos_adr+3 : qpos_adr+7].copy()
+                new_data_quat = quaternions.qmult(rot_quat, current_data_quat)
+                env.sim.data.qpos[qpos_adr+3 : qpos_adr+7] = new_data_quat
+    # 3. Synchronize the physics state
+    env.sim.forward()
+
+    return env
+
 
 def main(args):
     benchmark_dict = benchmark.get_benchmark_dict()
     task_suite = benchmark_dict[args.libero_task_suite]()
     task = task_suite.get_task(0)
-    
+
     robot_base_name = 'robot0_link0'
     camera_name = CAMERA_NAME
     theta_list = [-180, -150, -120, -90, -60, -30, -10, 0, 10, 30, 60, 90, 120, 150, 180]
     color_light_a = np.array([1.0, 0.0, 0.0])
     color_light_b = np.array([1.0, 1.0, 0.0])
     alpha_list = np.linspace(0, 1, 5)
-    
+
     theta_list = [-10, 0, 10]
     alpha_list = np.linspace(0, 1, 3)
-    
+
     object_name = "akita_black_bowl_2"
     transparency_list = np.linspace(0, 1, 5)
-    
+
     # rotate the camera around the robot base;
     need_rotate_camera = False
     if need_rotate_camera:
@@ -376,19 +468,19 @@ def main(args):
             for transparency in alpha_list:
                 env, task_description = get_libero_env(task, "llava", resolution=IMAGE_RESOLUTION)
                 env.reset()
-                env = recolor_scene(env, alpha=transparency, color_light_a=color_light_a, color_light_b=color_light_b, debug=True, 
+                env = recolor_scene(env, alpha=transparency, color_light_a=color_light_a, color_light_b=color_light_b, debug=True,
                                     need_change_light=need_change_light, base_num=base_num)
-    
+
     need_recolor_and_rotate = False
     if need_recolor_and_rotate:
         for transparency, theta in product(alpha_list, theta_list):
             env, task_description = get_libero_env(task, "llava", resolution=IMAGE_RESOLUTION)
             env.reset()
             camera_id = env.sim.model.camera_name2id(camera_name)
-            env = recolor_and_rotate_scene(env, alpha=transparency, color_light_a=color_light_a, color_light_b=color_light_b, 
-                                     camera_id=camera_id, camera_name=camera_name, robot_base_name=robot_base_name, 
+            env = recolor_and_rotate_scene(env, alpha=transparency, color_light_a=color_light_a, color_light_b=color_light_b,
+                                     camera_id=camera_id, camera_name=camera_name, robot_base_name=robot_base_name,
                                      theta=theta, debug=True)
-    
+
     # 将场景中的部分无色设置为透明，不可见
     need_change_object_transparency = False
     if need_change_object_transparency:
@@ -396,7 +488,7 @@ def main(args):
             env, task_description = get_libero_env(task, "llava", resolution=IMAGE_RESOLUTION)
             env.reset()
             env = change_object_transparency(env, object_name=object_name, alpha=transparency, debug=True)
-    
+
 
 if __name__ == "__main__":
     # 解析命令行参数
